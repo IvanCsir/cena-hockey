@@ -273,7 +273,8 @@ a { color: inherit; }
 
 .pitch__toast {
   position: absolute;
-  left: 50%; top: 0;
+  /* dentro de la cancha, debajo del arco: así no tapa el texto de la portada */
+  left: 50%; top: 62%;
   display: grid;
   gap: 2px;
   min-width: 220px;
@@ -283,13 +284,14 @@ a { color: inherit; }
   color: var(--navy-800);
   text-align: center;
   box-shadow: 0 14px 40px rgba(0, 0, 0, .3);
-  transform: translate(-50%, -40%) scale(.8);
+  max-width: calc(100% - 2 * var(--gutter));
+  transform: translate(-50%, -35%) scale(.8);
   opacity: 0;
   pointer-events: none;
   transition: opacity .25s ease, transform .35s cubic-bezier(.2, 1.4, .4, 1);
   z-index: 3;
 }
-.pitch__toast.is-show { opacity: 1; transform: translate(-50%, -70%) scale(1); pointer-events: auto; }
+.pitch__toast.is-show { opacity: 1; transform: translate(-50%, -50%) scale(1); pointer-events: auto; }
 .pitch__toast strong { font-family: var(--font-display); font-size: 2rem; line-height: 1; color: var(--secondary); }
 .pitch__toast span { font-size: .8rem; font-weight: 500; }
 .pitch__toast a { margin-top: 6px; font-size: .8rem; font-weight: 700; color: var(--royal); }
