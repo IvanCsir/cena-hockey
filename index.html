@@ -166,7 +166,8 @@
 
       <p class="menu__bebidas"><strong>Bebidas:</strong> agua mineral con y sin gas, agua saborizada, gaseosas, jugo de naranja y limonada.</p>
 
-      <div class="barra">
+      <!-- Solo se muestra en la pestaña "6ta, 5ta y PS" -->
+      <div class="barra" data-solo-tab="menu-mayores">
         <p class="barra__titulo">¡Barra libre!</p>
         <p class="barra__items">Fernet Branca · Campari · Aperol · Gin tonic · Cerveza</p>
         <p class="barra__pizzetas">
@@ -213,9 +214,36 @@
         </li>
       </ul>
 
-      <!-- Pago por transferencia al alias -->
+      <!-- Compra en 3 pasos: 1) entradas → 2) pago → 3) datos + comprobante -->
       <div class="pago">
-        <p class="pago__step"><span>1</span> Pagá el valor de tu categoría</p>
+        <form class="form" data-form novalidate>
+
+        <!-- PASO 1 -->
+        <p class="pago__step" id="confirmar"><span>1</span> Elegí tus entradas</p>
+
+        <fieldset class="field entradas-sel" data-entradas>
+          <legend>¿Cuántas entradas y de qué categorías?</legend>
+          <p class="entradas-sel__hint">Si vienen de distintas categorías (por ej. papá en PS e hija en 8va), sumá una en cada una.</p>
+          <!-- Las categorías se arman desde CONFIG.precios en js/main.js -->
+        </fieldset>
+
+        <fieldset class="field opciones">
+          <legend>¿Qué vas a pagar?</legend>
+          <label><input type="radio" name="pago" value="Total" checked><span>Total</span></label>
+          <label><input type="radio" name="pago" value="1ª cuota"><span>1ª cuota</span></label>
+          <label><input type="radio" name="pago" value="2ª cuota"><span>2ª cuota</span></label>
+        </fieldset>
+
+        <p class="form__total" data-total hidden>Total a transferir: <strong></strong></p>
+
+        <!-- PASO 2 -->
+        <p class="pago__step"><span>2</span> Pagá</p>
+
+        <div class="pago__monto" data-monto-pago>
+          <span data-monto-label>Elegí tus entradas en el paso 1 para ver el monto</span>
+          <strong data-monto-valor></strong>
+        </div>
+
         <div class="pago__box">
           <p class="pago__label">Alias</p>
           <p class="pago__alias" data-alias>PENDIENTE</p>
@@ -232,14 +260,14 @@
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 8h20v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8Zm0 0V6a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v2M6 15h4"/></svg>
           Pagar con Mercado Pago
         </a>
-        <p class="pago__hint">Ingresá el monto de tu categoría (o de la cuota) y, al terminar, guardá la captura del pago: la vas a necesitar en el paso 2.</p>
+        <p class="pago__hint">En Mercado Pago ingresá ese monto. Al terminar, guardá la captura del pago: la vas a necesitar en el paso 3.</p>
 
-        <p class="pago__step" id="confirmar"><span>2</span> Completá tus datos y subí el comprobante</p>
+        <!-- PASO 3 -->
+        <p class="pago__step"><span>3</span> Confirmá tu lugar</p>
         <p class="pago__hint pago__hint--top">Hacelo cada vez que pagues: con el total o con cada cuota.</p>
 
-        <form class="form" data-form novalidate>
           <label class="field">
-            <span>Nombre y apellido</span>
+            <span>Tu nombre y apellido</span>
             <input name="nombre" type="text" autocomplete="name" required maxlength="80">
           </label>
 
@@ -248,27 +276,10 @@
             <input name="telefono" type="tel" autocomplete="tel" inputmode="tel" maxlength="30">
           </label>
 
-          <div class="field-row">
-            <label class="field">
-              <span>Categoría</span>
-              <select name="categoria" required data-categorias>
-                <option value="" disabled selected>Elegí</option>
-              </select>
-            </label>
-            <label class="field field--small">
-              <span>Entradas</span>
-              <input name="cantidad" type="number" inputmode="numeric" min="1" max="20" value="1" required>
-            </label>
-          </div>
-
-          <fieldset class="field opciones">
-            <legend>¿Qué estás pagando?</legend>
-            <label><input type="radio" name="pago" value="Total" checked><span>Total</span></label>
-            <label><input type="radio" name="pago" value="1ª cuota"><span>1ª cuota</span></label>
-            <label><input type="radio" name="pago" value="2ª cuota"><span>2ª cuota</span></label>
-          </fieldset>
-
-          <p class="form__total" data-total hidden>Total a transferir: <strong></strong></p>
+          <label class="field">
+            <span>¿Quiénes van? <em>(opcional)</em></span>
+            <textarea name="asistentes" rows="2" maxlength="400" placeholder="Ej: Juan Pérez (PS), Sofía Pérez (8va)"></textarea>
+          </label>
 
           <label class="field">
             <span>Titular de la cuenta desde la que transferiste</span>
@@ -287,7 +298,7 @@
 
           <label class="field">
             <span>Comentarios <em>(opcional)</em></span>
-            <textarea name="comentarios" rows="2" maxlength="300" placeholder="Ej: soy celíaca, vengo con…"></textarea>
+            <textarea name="comentarios" rows="2" maxlength="300" placeholder="Ej: alguien es celíaco/a, vegetariano/a…"></textarea>
           </label>
 
           <!-- Trampa para bots: no completar -->
@@ -332,6 +343,7 @@
     </div>
     <p>¡Te esperamos para brindar por el 2027!</p>
     <p class="footer__small">Ante cualquier duda, hablá con tu capitán.</p>
+    <p class="footer__credit">Desarrollado por Iván Freiberg</p>
   </footer>
 
   <!-- Barra fija para celular -->

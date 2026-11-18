@@ -23,9 +23,14 @@ const CONFIG = {
     { nombre: "6ta, 5ta y PS", valor: 70000, categorias: ["6ta", "5ta", "PS"] },
   ],
 
+  // Aclaraciones que aparecen debajo del nombre de la categoría
+  notasCategoria: {
+    PS: "Mamis y papis también van como PS",
+  },
+
   // URL de la aplicación web de Google Apps Script (ver apps-script/Code.gs).
-  // Mientras diga PENDIENTE, el formulario funciona en "modo prueba" y no guarda nada.
-  sheetsUrl: "PENDIENTE",
+  // Si se reemplaza por algo que no sea una URL de script.google.com, el formulario pasa a "modo prueba".
+  sheetsUrl: "https://script.google.com/macros/s/AKfycbyA_TEJ6taShaEVKJBW1iI_juR6ZKE4uCQwFzwgGPgpRHqJGvPZmw3w_-fTOG5ePkYV/exec",
 
   // Pago por transferencia
   pago: {
@@ -130,6 +135,10 @@ setText("[data-titular]", CONFIG.pago.titular);
       t.tabIndex = on ? 0 : -1;
       document.getElementById(t.getAttribute("aria-controls")).hidden = !on;
     });
+    // Bloques que solo van con una pestaña (ej: la barra libre, solo para 6ta, 5ta y PS)
+    document.querySelectorAll("[data-solo-tab]").forEach((el) => {
+      el.hidden = el.dataset.soloTab !== tab.getAttribute("aria-controls");
+    });
   }
   tabs.forEach((t, i) => {
     t.addEventListener("click", () => activar(t));
@@ -145,12 +154,20 @@ setText("[data-titular]", CONFIG.pago.titular);
 // Precios
 const pricesEl = document.querySelector("[data-prices]");
 if (pricesEl) {
-  CONFIG.precios.forEach(({ nombre, valor }) => {
+  CONFIG.precios.forEach(({ nombre, valor, categorias }) => {
     const li = document.createElement("li");
     li.innerHTML = '<span></span><div class="prices__val"><strong></strong><small></small></div>';
     li.querySelector("span").textContent = nombre;
-    li.querySelector("strong").textContent = formatoPesos(valor);
-    li.querySelector("small").textContent = "o 2 cuotas de " + formatoPesos(valor / 2);
+    categorias.forEach((c) => {
+      const notaCat = (CONFIG.notasCategoria || {})[c];
+      if (!notaCat) return;
+      const small = document.createElement("small");
+      small.className = "prices__nota";
+      small.textContent = notaCat;
+      li.querySelector("span").appendChild(small);
+    });
+    li.querySelector(".prices__val strong").textContent = formatoPesos(valor);
+    li.querySelector(".prices__val small").textContent = "o 2 cuotas de " + formatoPesos(valor / 2);
     pricesEl.appendChild(li);
   });
 }
@@ -528,41 +545,100 @@ const festejarGol = (function () {
   const errorEl = form.querySelector("[data-form-error]");
   const submitBtn = form.querySelector(".form__submit");
   const submitLabel = form.querySelector("[data-submit-label]");
-  const select = form.querySelector("[data-categorias]");
+  const entradasEl = form.querySelector("[data-entradas]");
   const totalEl = form.querySelector("[data-total]");
   const upload = form.querySelector("[data-upload]");
   const uploadLabel = form.querySelector("[data-upload-label]");
   const fileInput = form.elements.comprobante;
   const MAX_ARCHIVO = 8 * 1024 * 1024;
+  const MAX_POR_CATEGORIA = 10;
 
-  // Menú de categorías a partir de CONFIG.precios
+  // Selector de entradas: un contador por categoría, agrupado por precio (desde CONFIG.precios)
   const precioPorCategoria = {};
-  CONFIG.precios.forEach((p) => p.categorias.forEach((c) => {
-    precioPorCategoria[c] = p.valor;
-    const opt = document.createElement("option");
-    opt.value = c;
-    opt.textContent = `${c} · ${formatoPesos(p.valor)}`;
-    select.appendChild(opt);
-  }));
+  const cantidades = {};
+  const filas = {};
+
+  CONFIG.precios.forEach((p) => {
+    const grupo = document.createElement("div");
+    grupo.className = "grupo";
+    grupo.innerHTML = '<p class="grupo__precio"><span></span><small></small></p>';
+    grupo.querySelector("span").textContent = `${formatoPesos(p.valor)} c/u`;
+    grupo.querySelector("small").textContent = `o 2 cuotas de ${formatoPesos(p.valor / 2)}`;
+
+    p.categorias.forEach((c) => {
+      precioPorCategoria[c] = p.valor;
+      cantidades[c] = 0;
+      const fila = document.createElement("div");
+      fila.className = "cat";
+      fila.innerHTML =
+        '<span></span><div class="stepper">' +
+        '<button type="button" data-menos>−</button><output aria-live="polite">0</output>' +
+        '<button type="button" data-mas>+</button></div>';
+      fila.querySelector("span").textContent = c;
+      const notaCat = (CONFIG.notasCategoria || {})[c];
+      if (notaCat) {
+        const small = document.createElement("small");
+        small.className = "cat__nota";
+        small.textContent = notaCat;
+        fila.querySelector("span").appendChild(small);
+      }
+      fila.querySelector("[data-menos]").setAttribute("aria-label", `Quitar una entrada de ${c}`);
+      fila.querySelector("[data-mas]").setAttribute("aria-label", `Sumar una entrada de ${c}`);
+      fila.querySelector("[data-menos]").addEventListener("click", () => cambiar(c, -1));
+      fila.querySelector("[data-mas]").addEventListener("click", () => cambiar(c, +1));
+      filas[c] = fila;
+      grupo.appendChild(fila);
+    });
+    entradasEl.appendChild(grupo);
+  });
+
+  function pintarFila(c) {
+    const n = cantidades[c];
+    const fila = filas[c];
+    fila.querySelector("output").textContent = n;
+    fila.querySelector("[data-menos]").disabled = n === 0;
+    fila.querySelector("[data-mas]").disabled = n >= MAX_POR_CATEGORIA;
+    fila.classList.toggle("is-on", n > 0);
+  }
+  function cambiar(c, delta) {
+    cantidades[c] = Math.min(MAX_POR_CATEGORIA, Math.max(0, cantidades[c] + delta));
+    pintarFila(c);
+    entradasEl.classList.remove("is-invalid");
+    actualizarTotal();
+  }
+  function resetCantidades() {
+    Object.keys(cantidades).forEach((c) => { cantidades[c] = 0; pintarFila(c); });
+  }
+  resetCantidades();
+
+  const totalEntradas = () => Object.values(cantidades).reduce((a, b) => a + b, 0);
+  // Ej: "PS ×1 · 8va ×1"
+  const resumenEntradas = () =>
+    Object.keys(cantidades).filter((c) => cantidades[c] > 0).map((c) => `${c} ×${cantidades[c]}`).join(" · ");
 
   const tipoPago = () => (form.querySelector('input[name="pago"]:checked') || {}).value || "Total";
 
   function montoActual() {
-    const precio = precioPorCategoria[select.value];
-    const cant = Math.max(1, parseInt(form.elements.cantidad.value, 10) || 1);
-    if (!precio) return 0;
-    return tipoPago() === "Total" ? precio * cant : (precio / 2) * cant;
+    const total = Object.keys(cantidades).reduce((s, c) => s + cantidades[c] * precioPorCategoria[c], 0);
+    return tipoPago() === "Total" ? total : total / 2;
   }
+  const montoPagoEl = form.querySelector("[data-monto-pago]");
   function actualizarTotal() {
     const m = montoActual();
     totalEl.hidden = !m;
+    // Paso 2: repetir el monto justo arriba del alias / Mercado Pago
+    montoPagoEl.classList.toggle("is-listo", !!m);
+    montoPagoEl.querySelector("[data-monto-label]").textContent = m
+      ? (tipoPago() === "Total" ? "Monto a pagar" : `Monto de la ${tipoPago()}`)
+      : "Elegí tus entradas en el paso 1 para ver el monto";
+    montoPagoEl.querySelector("[data-monto-valor]").textContent = m ? formatoPesos(m) : "";
     if (!m) return;
     const tipo = tipoPago();
-    totalEl.firstChild.textContent = tipo === "Total" ? "Total a transferir: " : `${tipo} a transferir: `;
+    const n = totalEntradas();
+    totalEl.firstChild.textContent =
+      `${n} ${n === 1 ? "entrada" : "entradas"} · ${tipo === "Total" ? "Total" : tipo} a transferir: `;
     totalEl.querySelector("strong").textContent = formatoPesos(m);
   }
-  select.addEventListener("change", actualizarTotal);
-  form.elements.cantidad.addEventListener("input", actualizarTotal);
   form.querySelectorAll('input[name="pago"]').forEach((r) => r.addEventListener("change", actualizarTotal));
 
   fileInput.addEventListener("change", () => {
@@ -581,9 +657,14 @@ const festejarGol = (function () {
 
   function validar() {
     let primero = null;
-    ["nombre", "categoria", "cantidad", "titular"].forEach((n) => {
+    // En el orden de la página: paso 1 (entradas) → paso 3 (nombre, titular)
+    if (totalEntradas() === 0) {
+      entradasEl.classList.add("is-invalid");
+      primero = entradasEl.querySelector("[data-mas]");
+    }
+    ["nombre", "titular"].forEach((n) => {
       const el = form.elements[n];
-      const vacio = !String(el.value).trim() || (n === "cantidad" && !(parseInt(el.value, 10) >= 1));
+      const vacio = !String(el.value).trim();
       el.classList.toggle("is-invalid", vacio);
       if (vacio && !primero) primero = el;
     });
@@ -654,11 +735,13 @@ const festejarGol = (function () {
       const datos = {
         nombre: form.elements.nombre.value.trim(),
         telefono: form.elements.telefono.value.trim(),
-        categoria: select.value,
-        cantidad: parseInt(form.elements.cantidad.value, 10) || 1,
+        entradas: { ...cantidades },          // { "7ma": 0, "8va": 1, …, "PS": 1 }
+        categoria: resumenEntradas(),         // "8va ×1 · PS ×1"
+        cantidad: totalEntradas(),
         pago: tipoPago(),
         monto: montoActual(),
         titular: form.elements.titular.value.trim(),
+        asistentes: form.elements.asistentes.value.trim(),
         comentarios: form.elements.comentarios.value.trim(),
         website: form.elements.website.value,
         archivo: {
@@ -703,6 +786,7 @@ const festejarGol = (function () {
 
   document.querySelector("[data-form-otra]").addEventListener("click", () => {
     form.reset();
+    resetCantidades();
     fileInput.dispatchEvent(new Event("change"));
     actualizarTotal();
     ok.hidden = true;

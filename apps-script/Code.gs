@@ -31,13 +31,21 @@ const HOJA = 'Inscriptos';
 const CARPETA = 'Comprobantes Cena Hockey';
 const MAX_BYTES = 10 * 1024 * 1024; // 10 MB por comprobante
 
+// Tienen que coincidir con las categorías de CONFIG.precios en js/main.js
+const CATEGORIAS = ['7ma', '8va', '9na', '10ma', '6ta', '5ta', 'PS'];
+
+// Una columna por categoría con la cantidad de entradas, así se pueden sumar fácil.
 const COLUMNAS = [
-  'Fecha', 'Nombre y apellido', 'Teléfono', 'Categoría', 'Cantidad', 'Pago',
-  'Monto', 'Titular de la cuenta', 'Comprobante', 'Miniatura', 'Comentarios', 'Pago verificado',
+  'Fecha', 'Nombre y apellido', 'Teléfono', 'Pago',
+  ...CATEGORIAS,
+  'Total entradas', 'Monto', 'Titular de la cuenta', 'Comprobante', 'Miniatura',
+  'Quiénes van', 'Comentarios', 'Pago verificado',
 ];
-const COL_COMPROBANTE = 9;
-const COL_MINIATURA = 10;
-const COL_VERIFICADO = 12;
+const col = (nombre) => COLUMNAS.indexOf(nombre) + 1;
+const COL_COMPROBANTE = col('Comprobante');
+const COL_MINIATURA = col('Miniatura');
+const COL_VERIFICADO = col('Pago verificado');
+const COL_MONTO = col('Monto');
 const ALTO_FILA_CON_MINIATURA = 110; // píxeles
 
 function doPost(e) {
@@ -49,12 +57,20 @@ function doPost(e) {
     // Trampa para bots: el campo "website" está oculto en el formulario.
     if (d.website) return responder({ ok: true });
 
-    const obligatorios = ['nombre', 'categoria', 'cantidad', 'titular'];
+    const obligatorios = ['nombre', 'titular'];
     for (const campo of obligatorios) {
       if (!d[campo] || String(d[campo]).trim() === '') {
         return responder({ ok: false, error: 'Falta el campo: ' + campo });
       }
     }
+
+    // Entradas por categoría (números enteros entre 0 y 20)
+    const entradas = CATEGORIAS.map((c) => {
+      const n = Math.floor(Number(d.entradas && d.entradas[c]) || 0);
+      return Math.min(20, Math.max(0, n));
+    });
+    const totalEntradas = entradas.reduce((a, b) => a + b, 0);
+    if (totalEntradas === 0) return responder({ ok: false, error: 'No se eligió ninguna entrada' });
 
     const hoja = obtenerHoja();
 
@@ -66,7 +82,8 @@ function doPost(e) {
       const tipo = /^(image\/(jpeg|png|webp|heic|heif)|application\/pdf)$/.test(d.archivo.tipo)
         ? d.archivo.tipo : 'application/octet-stream';
       const fecha = Utilities.formatDate(new Date(), 'America/Argentina/Mendoza', 'yyyy-MM-dd HH.mm');
-      const nombreArchivo = fecha + ' - ' + limpiar(d.nombre) + ' - ' + limpiar(d.categoria) + extension(tipo, d.archivo.nombre);
+      const cats = CATEGORIAS.filter((c, i) => entradas[i] > 0).join(' ');
+      const nombreArchivo = fecha + ' - ' + limpiar(d.nombre) + ' - ' + cats + ' - ' + limpiar(d.pago || 'Total') + extension(tipo, d.archivo.nombre);
       const archivo = obtenerCarpeta().createFile(Utilities.newBlob(bytes, tipo, nombreArchivo));
       link = archivo.getUrl();
     }
@@ -75,13 +92,14 @@ function doPost(e) {
       new Date(),
       seguro(d.nombre),
       seguro(d.telefono || ''),
-      seguro(d.categoria),
-      Number(d.cantidad) || 1,
       ['Total', '1ª cuota', '2ª cuota'].indexOf(d.pago) >= 0 ? d.pago : 'Total',
+      ...entradas.map((n) => n || ''),
+      totalEntradas,
       Number(d.monto) || '',
       seguro(d.titular),
       '',
       '',
+      seguro(d.asistentes || ''),
       seguro(d.comentarios || ''),
       false,
     ]);
@@ -135,7 +153,9 @@ function obtenerHoja() {
     hoja.getRange(1, 1, 1, COLUMNAS.length).setFontWeight('bold').setBackground('#0a1a6e').setFontColor('#ffffff');
     hoja.setFrozenRows(1);
     hoja.getRange('A:A').setNumberFormat('dd/MM/yyyy HH:mm');
-    hoja.getRange('G:G').setNumberFormat('$ #,##0');
+    hoja.getRange(1, COL_MONTO, hoja.getMaxRows(), 1).setNumberFormat('$ #,##0');
+    hoja.setColumnWidths(col(CATEGORIAS[0]), CATEGORIAS.length, 48);
+    hoja.getRange(1, col(CATEGORIAS[0]), hoja.getMaxRows(), CATEGORIAS.length + 1).setHorizontalAlignment('center');
     hoja.setColumnWidth(COL_MINIATURA, 130);
     hoja.getRange(1, 1, 1000, COLUMNAS.length).setVerticalAlignment('middle');
   }
