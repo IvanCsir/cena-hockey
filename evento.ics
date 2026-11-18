@@ -1,0 +1,20 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Regatas Andino//Fiesta Fin de Año//ES
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+BEGIN:VEVENT
+UID:fiesta-fin-de-anio-2026@regatas-andino
+DTSTAMP:20261118T000000Z
+DTSTART:20261212T230000Z
+DTEND:20261213T060000Z
+SUMMARY:Cena de Fin de Año del Hockey · Regatas Andino
+LOCATION:Restaurante de Regatas\, Av. Las Palmeras S/N\, Parque General San Martín\, Mendoza
+DESCRIPTION:¡Te esperamos para despedir el año! Incluye cena\, barra libre\, pizzetas y DJ.
+BEGIN:VALARM
+TRIGGER:-P1D
+ACTION:DISPLAY
+DESCRIPTION:Mañana es la Cena de Fin de Año del Hockey
+END:VALARM
+END:VEVENT
+END:VCALENDAR

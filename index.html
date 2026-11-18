@@ -1,0 +1,364 @@
+<!doctype html>
+<html lang="es-AR" data-theme="claro">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Cena de Fin de Año del Hockey · Regatas Andino</title>
+  <meta name="description" content="Te invitamos a la Cena de Fin de Año del Hockey de Regatas Andino. Sábado 12 de diciembre, 20 hs, en el Restaurante de Regatas.">
+  <meta name="theme-color" content="#e3e9ff">
+
+  <!-- Tema de colores: la invitación es clara (data-theme="claro" en <html>).
+       La versión oscura sigue disponible agregando ?tema=oscuro a la URL. -->
+  <script>
+    if (new URLSearchParams(location.search).get("tema") === "oscuro") {
+      document.documentElement.removeAttribute("data-theme");
+      document.querySelector('meta[name="theme-color"]').setAttribute("content", "#010a55");
+    }
+  </script>
+
+  <!-- Vista previa al compartir por WhatsApp / redes sociales.
+       Cuando esté publicada, reemplazar por la URL absoluta: https://USUARIO.github.io/invitacion-fiesta-regatas-andino/img/og-image.png -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Cena de Fin de Año del Hockey · Regatas Andino">
+  <meta property="og:description" content="Sábado 12 de diciembre · 20 hs · Restaurante de Regatas. Cena, barra libre y DJ. ¡Te esperamos!">
+  <meta property="og:image" content="img/og-image.png">
+  <meta name="twitter:card" content="summary_large_image">
+
+  <link rel="icon" href="img/logo-regatas.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <!-- ============ PORTADA ============ -->
+  <header class="hero">
+    <canvas class="stars" aria-hidden="true"></canvas>
+
+    <div class="hero__content">
+      <div class="logos">
+        <img class="logo--blanco" src="img/logo-andino.png" alt="Club Andino Mendoza" width="660" height="520">
+        <img class="logo--color" src="img/logo-andino-color.png" alt="Club Andino Mendoza" width="660" height="520">
+        <span class="logos__x" aria-hidden="true">×</span>
+        <img class="logo--blanco" src="img/logo-regatas.png" alt="Club Mendoza de Regatas" width="510" height="500">
+        <img class="logo--color" src="img/logo-regatas-color.png" alt="Club Mendoza de Regatas" width="510" height="500">
+      </div>
+
+      <p class="eyebrow">Regatas Andino te invita a la</p>
+      <h1 class="hero__title">Cena de<br><em>Fin de Año</em></h1>
+      <p class="hero__tag">Hockey</p>
+      <p class="hero__date">Sábado 12 de diciembre</p>
+      <p class="hero__extras">Cena · <strong>Barra libre</strong> · DJ</p>
+    </div>
+
+    <!-- Cancha de hockey vista desde arriba: mini juego de tiro al arco -->
+    <div class="pitch is-idle">
+      <svg viewBox="0 0 400 250" preserveAspectRatio="xMidYMax meet" aria-hidden="true">
+        <defs>
+          <pattern id="red-cancha" width="6" height="6" patternUnits="userSpaceOnUse">
+            <path d="M0 0L6 6M6 0L0 6" stroke="rgba(255,255,255,.35)" stroke-width=".6"/>
+          </pattern>
+        </defs>
+        <!-- red del arco -->
+        <rect x="160" y="42" width="80" height="18" fill="url(#red-cancha)"/>
+        <g class="pitch__lines">
+          <!-- línea de fondo -->
+          <line x1="-400" y1="60" x2="800" y2="60"/>
+          <!-- línea de 23 m -->
+          <line x1="-400" y1="217" x2="800" y2="217"/>
+          <!-- área -->
+          <path d="M60 60 A100 100 0 0 0 160 160 L240 160 A100 100 0 0 0 340 60"/>
+          <!-- línea punteada de 5 m -->
+          <path class="pitch__dashed" d="M30 60 A130 130 0 0 0 160 190 L240 190 A130 130 0 0 0 370 60"/>
+        </g>
+        <!-- arco -->
+        <path class="pitch__goal" d="M160 60 L160 42 L240 42 L240 60"/>
+        <!-- punto de penal -->
+        <circle class="pitch__spot" cx="200" cy="104" r="2"/>
+        <!-- arquero (visto desde arriba) -->
+        <g class="pitch__keeper" transform="translate(200 70)">
+          <rect x="-13" y="-5" width="26" height="10" rx="5"/>
+          <circle r="4.5"/>
+        </g>
+        <!-- bocha -->
+        <circle class="pitch__ring" cx="200" cy="148" r="10"/>
+        <circle class="pitch__ball" cx="200" cy="148" r="5"/>
+      </svg>
+
+      <button class="pitch__grab" type="button" aria-label="Patear al arco"></button>
+      <p class="pitch__hint">🏑 Deslizá la bocha hacia el arco</p>
+      <div class="pitch__toast" role="status" aria-live="polite">
+        <strong></strong>
+        <span></span>
+        <a href="#entradas" hidden>Sacá tu entrada →</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+
+    <!-- ============ CUENTA REGRESIVA ============ -->
+    <section id="cuenta" class="section reveal">
+      <p class="eyebrow">Falta muy poco</p>
+      <div class="countdown" data-countdown>
+        <div><strong data-d>--</strong><span>días</span></div>
+        <div><strong data-h>--</strong><span>horas</span></div>
+        <div><strong data-m>--</strong><span>min</span></div>
+        <div><strong data-s>--</strong><span>seg</span></div>
+      </div>
+      <p class="lead">Despedimos la temporada todos juntos: jugadoras, jugadores, entrenadores, familias y amigos del hockey.</p>
+    </section>
+
+    <!-- ============ CUÁNDO Y DÓNDE ============ -->
+    <section class="section cards">
+      <article class="card reveal">
+        <div class="card__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+        </div>
+        <h2>Cuándo</h2>
+        <p class="card__big">Sábado 12 de diciembre</p>
+        <p data-hora>20 hs</p>
+        <div class="card__actions">
+          <a class="btn btn--ghost" data-link="googleCalendar" target="_blank" rel="noopener">Google Calendar</a>
+          <a class="btn btn--ghost" href="evento.ics" download="cena-hockey-regatas-andino.ics">iPhone / otro</a>
+        </div>
+      </article>
+
+      <article class="card reveal">
+        <div class="card__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21Z"/><circle cx="12" cy="9.5" r="2.5"/></svg>
+        </div>
+        <h2>Dónde</h2>
+        <p class="card__big">Restaurante de Regatas</p>
+        <p>Av. Las Palmeras S/N<br>Parque General San Martín, Mendoza</p>
+        <div class="card__actions">
+          <a class="btn btn--ghost" data-link="maps" target="_blank" rel="noopener">¿Cómo llegar?</a>
+        </div>
+      </article>
+    </section>
+
+    <!-- ============ MENÚ ============ -->
+    <section id="menu" class="section section--panel reveal">
+      <p class="eyebrow">El menú</p>
+      <h2 class="section__title">¿Qué vamos a comer?</h2>
+
+      <div class="tabs" role="tablist" aria-label="Menú según categoría">
+        <button type="button" role="tab" id="tab-mayores" aria-controls="menu-mayores" aria-selected="true">6ta, 5ta y PS</button>
+        <button type="button" role="tab" id="tab-menores" aria-controls="menu-menores" aria-selected="false" tabindex="-1">7ma a 10ma</button>
+      </div>
+
+      <div class="menu__panel" id="menu-mayores" role="tabpanel" aria-labelledby="tab-mayores">
+        <dl class="platos">
+          <div><dt>Entrada</dt><dd>Crepes de ricota y espinaca con salsa de 4 quesos</dd></div>
+          <div><dt>Principal</dt><dd>Ternerita al horno en su salsa, con papas rústicas y soufflé de espinaca</dd></div>
+          <div><dt>Postre</dt><dd>Brownie con helado de americana y salsa de frutos rojos</dd></div>
+          <div><dt>Vinos</dt><dd>Nampe Malbec y Sauvignon Blanc</dd></div>
+        </dl>
+      </div>
+
+      <div class="menu__panel" id="menu-menores" role="tabpanel" aria-labelledby="tab-menores" hidden>
+        <dl class="platos">
+          <div><dt>Principal</dt><dd>Milanesa con papas fritas</dd></div>
+          <div><dt>Postre</dt><dd>Helado</dd></div>
+        </dl>
+      </div>
+
+      <p class="menu__bebidas"><strong>Bebidas:</strong> agua mineral con y sin gas, agua saborizada, gaseosas, jugo de naranja y limonada.</p>
+
+      <div class="barra">
+        <p class="barra__titulo">¡Barra libre!</p>
+        <p class="barra__items">Fernet Branca · Campari · Aperol · Gin tonic · Cerveza</p>
+        <p class="barra__pizzetas">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5c5-2 11-2 16 0L12 21 4 5Z"/><path d="M5.6 8.4c4-1.3 8.8-1.3 12.8 0"/><circle cx="10" cy="11.5" r="1"/><circle cx="14" cy="13.5" r="1"/></svg>
+          + Pizzetas durante el baile
+        </p>
+        <p class="barra__nota">Bebidas alcohólicas solo para mayores de 18 años.</p>
+      </div>
+    </section>
+
+    <!-- ============ ENTRADAS ============ -->
+    <section id="entradas" class="section section--panel reveal">
+      <p class="eyebrow">Entradas</p>
+      <h2 class="section__title">Asegurá tu lugar</h2>
+      <p class="lead">Las entradas se abonan <strong>por anticipado</strong> por transferencia. No se venden entradas en la puerta.</p>
+
+      <ul class="prices" data-prices></ul>
+
+      <div class="cuotas">
+        <p class="cuotas__title">Podés pagar en <strong>2 cuotas</strong></p>
+        <ol class="cuotas__list">
+          <li><strong>1ª cuota</strong><span>hasta el <b data-cuota1>30 de noviembre</b></span></li>
+          <li><strong>2ª cuota</strong><span>hasta el <b data-cuota2>10 de diciembre</b></span></li>
+        </ol>
+      </div>
+
+      <p class="includes__title">La entrada incluye</p>
+      <ul class="includes">
+        <li>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v8M5 3v5a2 2 0 0 0 4 0V3M7 11v10M17 21V3c-2 1-3 3.5-3 7h3"/></svg>
+          Cena
+        </li>
+        <li>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h10l-1 7a4 4 0 0 1-8 0L7 3ZM12 14v7M8 21h8M7.5 7h9"/></svg>
+          Barra libre
+        </li>
+        <li>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5c5-2 11-2 16 0L12 21 4 5Z"/><path d="M5.6 8.4c4-1.3 8.8-1.3 12.8 0"/><circle cx="10" cy="11.5" r="1"/><circle cx="14" cy="13.5" r="1"/></svg>
+          Pizzetas
+        </li>
+        <li>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.5"/><path d="M12 3a9 9 0 0 1 9 9"/></svg>
+          DJ
+        </li>
+      </ul>
+
+      <!-- Pago por transferencia al alias -->
+      <div class="pago">
+        <p class="pago__step"><span>1</span> Transferí el valor de tu categoría a este alias</p>
+        <div class="pago__box">
+          <p class="pago__label">Alias</p>
+          <p class="pago__alias" data-alias>PENDIENTE</p>
+          <p class="pago__titular">Titular: <span data-titular>PENDIENTE</span></p>
+          <button class="btn btn--primary pago__copy" type="button" data-copiar>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></svg>
+            <span>Copiar alias</span>
+          </button>
+        </div>
+        <p class="pago__hint">Podés transferir desde cualquier banco o billetera virtual (Mercado Pago, Ualá, etc.).</p>
+
+        <p class="pago__step" id="confirmar"><span>2</span> Completá tus datos y subí el comprobante</p>
+        <p class="pago__hint pago__hint--top">Hacelo cada vez que pagues: con el total o con cada cuota.</p>
+
+        <form class="form" data-form novalidate>
+          <label class="field">
+            <span>Nombre y apellido</span>
+            <input name="nombre" type="text" autocomplete="name" required maxlength="80">
+          </label>
+
+          <label class="field">
+            <span>Teléfono <em>(opcional)</em></span>
+            <input name="telefono" type="tel" autocomplete="tel" inputmode="tel" maxlength="30">
+          </label>
+
+          <div class="field-row">
+            <label class="field">
+              <span>Categoría</span>
+              <select name="categoria" required data-categorias>
+                <option value="" disabled selected>Elegí</option>
+              </select>
+            </label>
+            <label class="field field--small">
+              <span>Entradas</span>
+              <input name="cantidad" type="number" inputmode="numeric" min="1" max="20" value="1" required>
+            </label>
+          </div>
+
+          <fieldset class="field opciones">
+            <legend>¿Qué estás pagando?</legend>
+            <label><input type="radio" name="pago" value="Total" checked><span>Total</span></label>
+            <label><input type="radio" name="pago" value="1ª cuota"><span>1ª cuota</span></label>
+            <label><input type="radio" name="pago" value="2ª cuota"><span>2ª cuota</span></label>
+          </fieldset>
+
+          <p class="form__total" data-total hidden>Total a transferir: <strong></strong></p>
+
+          <label class="field">
+            <span>Titular de la cuenta desde la que transferiste</span>
+            <input name="titular" type="text" required maxlength="80" placeholder="Como figura en el banco">
+          </label>
+
+          <div class="field">
+            <span>Comprobante de la transferencia</span>
+            <label class="upload" data-upload>
+              <input name="comprobante" type="file" accept="image/*,application/pdf" required>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>
+              <strong data-upload-label>Subir captura o PDF</strong>
+              <small>Una foto o captura de pantalla sirve</small>
+            </label>
+          </div>
+
+          <label class="field">
+            <span>Comentarios <em>(opcional)</em></span>
+            <textarea name="comentarios" rows="2" maxlength="300" placeholder="Ej: soy celíaca, vengo con…"></textarea>
+          </label>
+
+          <!-- Trampa para bots: no completar -->
+          <input class="form__hp" name="website" type="text" tabindex="-1" autocomplete="off" aria-hidden="true">
+
+          <p class="form__error" data-form-error role="alert" hidden></p>
+
+          <button class="btn btn--primary form__submit" type="submit">
+            <span data-submit-label>Confirmar mi lugar</span>
+          </button>
+        </form>
+
+        <div class="form__ok" data-form-ok hidden>
+          <p class="form__ok-title">¡Ya estás en la lista! 🏑</p>
+          <p>Vamos a verificar tu transferencia. ¡Nos vemos el sábado 12 de diciembre!</p>
+          <p class="form__ok-cuota" data-ok-cuota hidden>Acordate: la <strong>2ª cuota</strong> se paga hasta el <strong data-cuota2>10 de diciembre</strong>. Cuando la pagues, volvé a cargar el comprobante acá eligiendo “2ª cuota”.</p>
+          <button class="btn btn--ghost" type="button" data-form-otra>Cargar otra persona</button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="footer">
+    <div class="footer__goal" aria-hidden="true">
+      <svg viewBox="0 0 76 40">
+        <defs>
+          <pattern id="red-pie" width="5" height="5" patternUnits="userSpaceOnUse">
+            <path d="M0 0L5 5M5 0L0 5" stroke="currentColor" stroke-width=".5" opacity=".35"/>
+          </pattern>
+        </defs>
+        <rect class="red" x="6" y="4" width="64" height="34" fill="url(#red-pie)"/>
+        <path class="marco" d="M6 38 L6 4 L70 4 L70 38"/>
+      </svg>
+      <p class="footer__goal-txt">¡Golazo!</p>
+    </div>
+    <div class="logos logos--small">
+      <img class="logo--blanco" src="img/logo-andino.png" alt="Club Andino Mendoza" loading="lazy" width="660" height="520">
+      <img class="logo--color" src="img/logo-andino-color.png" alt="Club Andino Mendoza" loading="lazy" width="660" height="520">
+      <img class="logo--blanco" src="img/logo-regatas.png" alt="Club Mendoza de Regatas" loading="lazy" width="510" height="500">
+      <img class="logo--color" src="img/logo-regatas-color.png" alt="Club Mendoza de Regatas" loading="lazy" width="510" height="500">
+    </div>
+    <p>¡Te esperamos para brindar por el 2027!</p>
+    <p class="footer__small">Ante cualquier duda, hablá con tu capitán.</p>
+  </footer>
+
+  <!-- Barra fija para celular -->
+  <nav class="dock" aria-label="Acciones rápidas">
+    <a href="#entradas">Entradas</a>
+    <a class="dock__main" href="#confirmar">Confirmar</a>
+    <a data-link="maps" target="_blank" rel="noopener">Cómo llegar</a>
+  </nav>
+
+  <!-- La jugada: recorrido de la bocha mientras se baja -->
+  <svg class="jugada" aria-hidden="true">
+    <defs><clipPath id="jugada-clip"><rect x="0" y="0" width="100%" height="0"/></clipPath></defs>
+    <path class="jugada__trail" clip-path="url(#jugada-clip)"/>
+    <circle class="jugada__ball" r="6" style="opacity:0"/>
+  </svg>
+
+  <!-- Festejo de gol al confirmar o comprar -->
+  <div class="gol" hidden>
+    <div class="gol__card" role="status" aria-live="assertive">
+      <svg class="gol__arco" viewBox="0 0 150 80" aria-hidden="true">
+        <defs>
+          <pattern id="red-gol" width="7" height="7" patternUnits="userSpaceOnUse">
+            <path d="M0 0L7 7M7 0L0 7" stroke="rgba(255,255,255,.4)" stroke-width=".7"/>
+          </pattern>
+        </defs>
+        <rect class="red" x="10" y="8" width="130" height="70" fill="url(#red-gol)"/>
+        <path class="marco" d="M10 78 L10 8 L140 8 L140 78"/>
+        <circle class="bocha" cx="75" cy="52" r="7"/>
+      </svg>
+      <p class="gol__title">¡GOL!</p>
+      <p class="gol__msg"></p>
+    </div>
+  </div>
+
+  <script src="js/main.js" defer></script>
+</body>
+</html>
