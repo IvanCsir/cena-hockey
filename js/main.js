@@ -64,7 +64,7 @@ CONFIG.links.googleCalendar =
   "&text=" + encodeURIComponent(TITULO) +
   "&dates=" + toGCalDate(CONFIG.inicio) + "/" + toGCalDate(CONFIG.fin) +
   "&location=" + encodeURIComponent(CONFIG.lugar) +
-  "&details=" + encodeURIComponent("¡Te esperamos! " + location.href.split("#")[0]);
+  "&details=" + encodeURIComponent("¡Te esperamos! https://is.gd/hgCobI");
 
 // Links
 document.querySelectorAll("[data-link]").forEach((el) => {
