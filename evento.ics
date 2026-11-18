@@ -9,7 +9,7 @@ DTSTAMP:20261118T000000Z
 DTSTART:20261212T230000Z
 DTEND:20261213T060000Z
 SUMMARY:Cena de Fin de Año del Hockey · Regatas Andino
-LOCATION:Restaurante de Regatas\, Av. Las Palmeras S/N\, Parque General San Martín\, Mendoza
+LOCATION:Restaurante Regatas\, Av. Las Palmeras S/N\, Parque General San Martín\, Mendoza
 DESCRIPTION:¡Te esperamos para despedir el año! Incluye cena\, barra libre\, pizzetas y DJ.
 BEGIN:VALARM
 TRIGGER:-P1D
