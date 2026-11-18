@@ -671,6 +671,28 @@ a { color: inherit; }
 .pago__monto.is-listo { color: var(--heading); font-weight: 600; }
 .pago__monto strong { font-family: var(--font-display); font-size: 1.6rem; font-weight: 600; line-height: 1; color: var(--secondary); white-space: nowrap; }
 .pago__hint--sm { margin-bottom: .6rem; }
+
+/* Aviso: después de pagar hay que confirmar en el paso 3 */
+.pago__aviso {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: #fff6d6;
+  border: 2px solid #f0b400;
+  color: #5c4300;
+  font-size: .86rem;
+  line-height: 1.45;
+  text-align: left;
+  box-shadow: 0 8px 22px rgba(240, 180, 0, .18);
+}
+.pago__aviso p { margin: 0; }
+.pago__aviso strong { color: #3d2c00; }
+.pago__aviso svg {
+  flex: 0 0 26px; height: 26px;
+  fill: #f0b400; stroke: #3d2c00; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;
+}
 .pago__o {
   display: flex;
   align-items: center;
