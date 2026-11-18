@@ -294,7 +294,7 @@ a { color: inherit; }
 .pitch__toast.is-show { opacity: 1; transform: translate(-50%, -50%) scale(1); pointer-events: auto; }
 .pitch__toast strong { font-family: var(--font-display); font-size: 2rem; line-height: 1; color: var(--secondary); }
 .pitch__toast span { font-size: .8rem; font-weight: 500; }
-.pitch__toast a { margin-top: 6px; font-size: .8rem; font-weight: 700; color: var(--royal); }
+.pitch__toast small { margin-top: 6px; font-size: .8rem; font-weight: 700; color: var(--royal); }
 
 /* ---------- Secciones ---------- */
 .section {
@@ -440,6 +440,14 @@ a { color: inherit; }
   letter-spacing: .24em;
   text-transform: uppercase;
   color: var(--muted);
+}
+.hero__hora {
+  margin: .5rem 0 0;
+  font-size: .95rem;
+  font-weight: 700;
+  letter-spacing: .24em;
+  text-transform: uppercase;
+  color: var(--heading);
 }
 .hero .eyebrow { color: var(--accent); } /* en la portada el rojo queda para HOCKEY */
 .hero__extras strong { color: var(--secondary); font-weight: 700; }

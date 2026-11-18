@@ -381,7 +381,7 @@ const confetti = (function () {
   function showToast(title, sub, cta) {
     toast.querySelector("strong").textContent = title;
     toast.querySelector("span").textContent = sub;
-    toast.querySelector("a").hidden = !cta;
+    toast.querySelector("small").hidden = !cta;
     toast.classList.add("is-show");
   }
 
@@ -407,9 +407,9 @@ const confetti = (function () {
       if (navigator.vibrate) navigator.vibrate(60);
       showToast(goles > 1 ? `¡GOOOL! ×${goles}` : "¡GOOOL!", "Nos vemos el sábado 12/12", true);
     } else if (result === "saved") {
-      showToast("¡Atajó!", "El arquero está atento. Probá de nuevo", false);
+      showToast("¡Atajó!", "De hijo te tiene", false);
     } else {
-      showToast("¡Afuera!", "Casi… probá de nuevo", false);
+      showToast("¡Afuera!", "Y sí, como todo el año", false);
     }
     clearTimeout(resetTimer);
     resetTimer = setTimeout(reset, result === "goal" ? 2800 : 1700);
