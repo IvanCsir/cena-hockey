@@ -181,7 +181,7 @@
     <section id="entradas" class="section section--panel reveal">
       <p class="eyebrow">Entradas</p>
       <h2 class="section__title">Asegurá tu lugar</h2>
-      <p class="lead">Las entradas se abonan <strong>por anticipado</strong> por transferencia. No se venden entradas en la puerta.</p>
+      <p class="lead">Las entradas se abonan <strong>por anticipado</strong> por transferencia o Mercado Pago. No se venden entradas en la puerta.</p>
 
       <ul class="prices" data-prices></ul>
 
@@ -215,7 +215,7 @@
 
       <!-- Pago por transferencia al alias -->
       <div class="pago">
-        <p class="pago__step"><span>1</span> Transferí el valor de tu categoría a este alias</p>
+        <p class="pago__step"><span>1</span> Pagá el valor de tu categoría</p>
         <div class="pago__box">
           <p class="pago__label">Alias</p>
           <p class="pago__alias" data-alias>PENDIENTE</p>
@@ -225,7 +225,14 @@
             <span>Copiar alias</span>
           </button>
         </div>
-        <p class="pago__hint">Podés transferir desde cualquier banco o billetera virtual (Mercado Pago, Ualá, etc.).</p>
+        <p class="pago__hint pago__hint--sm">Podés transferir desde cualquier banco o billetera virtual.</p>
+
+        <p class="pago__o"><span>o</span></p>
+        <a class="btn btn--mp" data-link="mercadoPago" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 8h20v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8Zm0 0V6a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v2M6 15h4"/></svg>
+          Pagar con Mercado Pago
+        </a>
+        <p class="pago__hint">Ingresá el monto de tu categoría (o de la cuota) y, al terminar, guardá la captura del pago: la vas a necesitar en el paso 2.</p>
 
         <p class="pago__step" id="confirmar"><span>2</span> Completá tus datos y subí el comprobante</p>
         <p class="pago__hint pago__hint--top">Hacelo cada vez que pagues: con el total o con cada cuota.</p>

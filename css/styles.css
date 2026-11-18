@@ -521,24 +521,29 @@ a { color: inherit; }
 .cuotas {
   max-width: 340px;
   margin: -.5rem auto 1.9rem;
-  padding: 14px 16px;
-  border-radius: 14px;
-  background: var(--primary-soft);
-  border: 1px solid var(--primary-line);
+  padding: 16px 16px 14px;
+  border-radius: 16px;
+  color: #fff;
+  background: linear-gradient(135deg, var(--secondary), #a31a21);
+  box-shadow: 0 12px 30px rgba(208, 40, 47, .3);
 }
-.cuotas__title { margin: 0 0 .6rem; font-size: .92rem; color: var(--heading); }
-.cuotas__title strong { color: var(--secondary); }
+.cuotas__title { margin: 0 0 .7rem; font-size: 1rem; color: #fff; }
+.cuotas__title strong { font-family: var(--font-display); font-size: 1.45rem; font-weight: 600; color: #fff; }
 .cuotas__list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
 .cuotas__list li {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  gap: 10px;
-  font-size: .86rem;
-  color: var(--muted);
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, .14);
+  font-size: .8rem;
+  color: #ffe3e4;
+  white-space: nowrap;
 }
-.cuotas__list strong { color: var(--heading); }
-.cuotas__list b { color: var(--heading); font-weight: 600; }
+.cuotas__list strong { color: #fff; }
+.cuotas__list b { color: #fff; font-weight: 700; }
 
 /* Qué incluye */
 .includes__title {
@@ -591,7 +596,7 @@ a { color: inherit; }
   display: grid;
   place-items: center;
   border-radius: 50%;
-  background: var(--primary);
+  background: var(--secondary);
   color: #fff;
   font-size: .8rem;
 }
@@ -612,10 +617,11 @@ a { color: inherit; }
   color: var(--accent);
 }
 .pago__alias {
-  margin: .2rem 0 .1rem;
-  font-family: var(--font-display);
-  font-size: clamp(1.5rem, 7vw, 2rem);
-  font-weight: 600;
+  margin: .25rem 0 .2rem;
+  font-family: var(--font-body); /* sans-serif: que "l" y "1" no se confundan */
+  font-size: clamp(1.2rem, 5.6vw, 1.5rem);
+  font-weight: 700;
+  letter-spacing: .01em;
   line-height: 1.15;
   color: var(--heading);
   overflow-wrap: anywhere;
@@ -628,6 +634,28 @@ a { color: inherit; }
 .pago__hint { margin: .8rem auto 2rem; max-width: 32ch; font-size: .8rem; color: var(--muted); }
 
 .pago__hint--top { margin: -.4rem auto 1.2rem; }
+.pago__hint--sm { margin-bottom: .6rem; }
+.pago__o {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  max-width: 360px;
+  margin: .4rem 0 .9rem;
+  font-size: .8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .2em;
+  color: var(--muted);
+}
+.pago__o::before, .pago__o::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+.btn--mp {
+  width: 100%;
+  max-width: 360px;
+  color: #fff;
+  background: linear-gradient(135deg, #00a6ee, #0072c6);
+  box-shadow: 0 10px 30px rgba(0, 158, 227, .3);
+}
 .pago__hint strong { color: var(--heading); }
 #confirmar { scroll-margin-top: 24px; }
 
@@ -725,7 +753,12 @@ a { color: inherit; }
 
 .form__hp { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
 .form__error { margin: 0; padding: 10px 14px; border-radius: 12px; background: rgba(208, 40, 47, .1); color: #a31a21; font-size: .85rem; font-weight: 600; }
-.form__submit { max-width: none; margin-top: 4px; }
+.form__submit {
+  max-width: none;
+  margin-top: 4px;
+  background: linear-gradient(135deg, var(--secondary), #a31a21);
+  box-shadow: 0 10px 30px rgba(208, 40, 47, .35);
+}
 .form__submit[disabled] { opacity: .7; cursor: progress; }
 
 .form__ok { max-width: 340px; padding: 8px 0 0; }

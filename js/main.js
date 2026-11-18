@@ -29,11 +29,13 @@ const CONFIG = {
 
   // Pago por transferencia
   pago: {
-    alias:   "PENDIENTE",   // PENDIENTE: alias de la cuenta
-    titular: "PENDIENTE",   // PENDIENTE: nombre del titular, para que la gente verifique antes de transferir
+    alias:   "delfi.palacios123",
+    titular: "Delfina Nahir Palacios Gomez", // para que la gente verifique antes de transferir
   },
 
-  links: {},
+  links: {
+    mercadoPago: "https://mpago.la/1FUsoKa", // link de pago de Mercado Pago
+  },
 };
 
 /* ==========================================================
