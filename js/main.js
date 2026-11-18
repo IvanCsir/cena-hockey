@@ -281,28 +281,43 @@ const REDUCE_MOTION = window.matchMedia("(prefers-reduced-motion: reduce)").matc
 
 // Papelitos (azul, rojo y blanco). x, y en píxeles de pantalla.
 const confetti = (function () {
-  let canvas, ctx, parts = [], running = false;
+  let canvas, ctx, parts = [], running = false, W = 0, H = 0;
   const COLORS = ["#d0282f", "#3344b5", "#ffffff", "#8d9bff"];
 
   function ensureCanvas() {
     if (canvas) return;
     canvas = document.createElement("canvas");
     canvas.setAttribute("aria-hidden", "true");
-    canvas.style.cssText = "position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:60";
+    canvas.style.cssText = "position:fixed;left:0;top:0;pointer-events:none;z-index:60";
     document.body.appendChild(canvas);
     ctx = canvas.getContext("2d");
+    // En iPhone la barra de Safari cambia el alto de la pantalla al scrollear:
+    // hay que reajustar el lienzo, si no quedan papelitos "pegados" abajo.
+    addEventListener("resize", () => { if (running) resize(); });
   }
 
   function resize() {
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    canvas.width = innerWidth * dpr;
-    canvas.height = innerHeight * dpr;
+    W = innerWidth; H = innerHeight;
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
+    canvas.style.width = W + "px";
+    canvas.style.height = H + "px";
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
 
+  // Borra el lienzo entero (en píxeles reales), no solo la parte visible
+  function clear() {
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.restore();
+  }
+
   function frame() {
-    ctx.clearRect(0, 0, innerWidth, innerHeight);
-    parts = parts.filter((p) => p.y < innerHeight + 20 && p.life > 0);
+    if (W !== innerWidth || H !== innerHeight) resize();
+    clear();
+    parts = parts.filter((p) => p.y < H + 20 && p.life > 0);
     for (const p of parts) {
       p.vy += 0.18; p.vx *= 0.99; p.vy *= 0.99;
       p.x += p.vx; p.y += p.vy; p.rot += p.vr; p.life -= 1;
@@ -315,7 +330,7 @@ const confetti = (function () {
       ctx.restore();
     }
     if (parts.length) requestAnimationFrame(frame);
-    else { running = false; ctx.clearRect(0, 0, innerWidth, innerHeight); }
+    else { running = false; clear(); }
   }
 
   return function (x, y, count = 120) {
