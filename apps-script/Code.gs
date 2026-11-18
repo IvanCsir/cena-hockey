@@ -88,19 +88,31 @@ function doPost(e) {
       link = archivo.getUrl();
     }
 
+    const pago = ['Total', '1ª cuota', '2ª cuota'].indexOf(d.pago) >= 0 ? d.pago : 'Total';
+
+    // La 2ª cuota paga entradas que ya se contaron con la 1ª: no se vuelven a sumar
+    // en las columnas de categorías ni en "Total entradas". Quedan anotadas en
+    // Comentarios para poder controlarlas contra la fila de la 1ª cuota.
+    const esSegunda = pago === '2ª cuota';
+    let comentarios = d.comentarios || '';
+    if (esSegunda) {
+      const detalle = CATEGORIAS.filter((c, i) => entradas[i] > 0).map((c) => c + ' ×' + entradas[CATEGORIAS.indexOf(c)]).join(' · ');
+      comentarios = '[2ª cuota de: ' + detalle + ']' + (comentarios ? ' ' + comentarios : '');
+    }
+
     hoja.appendRow([
       new Date(),
       seguro(d.nombre),
       seguro(d.telefono || ''),
-      ['Total', '1ª cuota', '2ª cuota'].indexOf(d.pago) >= 0 ? d.pago : 'Total',
-      ...entradas.map((n) => n || ''),
-      totalEntradas,
+      pago,
+      ...entradas.map((n) => (esSegunda ? '' : n || '')),
+      esSegunda ? '' : totalEntradas,
       Number(d.monto) || '',
       seguro(d.titular),
       '',
       '',
       seguro(d.asistentes || ''),
-      seguro(d.comentarios || ''),
+      seguro(comentarios),
       false,
     ]);
 

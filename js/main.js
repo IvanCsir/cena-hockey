@@ -654,7 +654,12 @@ const festejarGol = (function () {
       `${n} ${n === 1 ? "entrada" : "entradas"} · ${tipo === "Total" ? "Total" : tipo} a transferir: `;
     totalEl.querySelector("strong").textContent = formatoPesos(m);
   }
-  form.querySelectorAll('input[name="pago"]').forEach((r) => r.addEventListener("change", actualizarTotal));
+  const avisoCuota2 = form.querySelector("[data-aviso-cuota2]");
+  function alCambiarPago() {
+    avisoCuota2.hidden = tipoPago() !== "2ª cuota";
+    actualizarTotal();
+  }
+  form.querySelectorAll('input[name="pago"]').forEach((r) => r.addEventListener("change", alCambiarPago));
 
   fileInput.addEventListener("change", () => {
     const f = fileInput.files[0];
@@ -803,7 +808,7 @@ const festejarGol = (function () {
     form.reset();
     resetCantidades();
     fileInput.dispatchEvent(new Event("change"));
-    actualizarTotal();
+    alCambiarPago();
     ok.hidden = true;
     form.hidden = false;
     form.elements.nombre.focus();
