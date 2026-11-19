@@ -218,9 +218,10 @@ function responder(obj) {
 /* ═══════════════════════════ PÁGINA DE INGRESO (/puerta) ═══════════════════════════
  * La página puerta/ del sitio busca a la gente cuando llega y marca cuántos entraron.
  * Para usarla:
- * 1. En el editor de Apps Script elegí la función "crearClavePuerta" (arriba, al lado
- *    de "Ejecutar") y tocá Ejecutar. En el "Registro de ejecución" aparece la clave y
- *    el link para mandarle a quienes estén en la puerta.
+ * 1. Cargar la clave: ⚙️ Configuración del proyecto → Propiedades de la secuencia de
+ *    comandos → propiedad CLAVE_PUERTA con la clave que quieras. (O elegir la función
+ *    "crearClavePuerta" arriba y tocar Ejecutar: inventa una y la muestra en el registro.)
+ *    El link para la puerta es URL_PUERTA + "#clave=" + la clave.
  * 2. Implementar → Gestionar implementaciones → ✏️ → Versión: "Nueva versión" → Implementar.
  * Los ingresos se guardan en la columna "Ingresaron" de la hoja Inscriptos.
  * ═══════════════════════════════════════════════════════════════════════════════════ */
@@ -403,7 +404,11 @@ function marcarIngreso(d) {
   const hoja = obtenerHoja();
   const col = columnaIngresaron(hoja);
   const fila = leerFilas(hoja).filter((f) => f.fila === Number(d.fila) && f.pago !== '2ª cuota')[0];
-  if (!fila) return responder({ ok: false, error: 'No se encontró la compra' });
+  if (!fila) return responder({ ok: false, error: 'cambio' });
+  // Si alguien ordenó o borró filas, ese número ya es de otra persona: no se toca nada
+  if (d.nombre && palabras(d.nombre).join(' ') !== palabras(fila.nombre).join(' ')) {
+    return responder({ ok: false, error: 'cambio' });
+  }
 
   // Cada toque tiene un id: si el celular reintenta por mala señal, no se cuenta dos veces
   const cache = CacheService.getScriptCache();

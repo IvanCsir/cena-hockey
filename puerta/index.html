@@ -166,6 +166,7 @@
     let ultimoGuardado = 0;
     let enviando = false;
     let aviso = "";
+    let listaVieja = false;
 
     const pesos = (n) => "$ " + Number(n).toLocaleString("es-AR");
     const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -239,7 +240,7 @@
             const res = await fetch(URL_SCRIPT, {
               method: "POST",
               headers: { "Content-Type": "text/plain;charset=utf-8" },
-              body: JSON.stringify({ accion: "ingreso", clave, fila: p.id, delta: p.delta, op: p.op }),
+              body: JSON.stringify({ accion: "ingreso", clave, fila: p.id, nombre: p.nombre, delta: p.delta, op: p.op }),
             });
             json = await res.json();
           } catch (e) {
@@ -252,6 +253,10 @@
             const g = datos && datos.grupos.find((x) => x.id === json.id);
             if (g) g.ingresaron = json.ingresaron;
             ultimoGuardado = Date.now();
+          } else if (json.error === "cambio") {
+            // Alguien ordenó o borró filas en la planilla: ese toque no se guardó
+            listaVieja = true;
+            alert(`La planilla cambió y el ingreso de ${p.nombre || "esa compra"} NO se guardó.\nLa lista se va a actualizar: buscalo de nuevo y volvé a marcarlo.`);
           } else {
             toast("No se pudo guardar: " + (json.error || "error"));
           }
@@ -261,6 +266,11 @@
       } finally {
         enviando = false;
         render();
+      }
+      if (listaVieja && !pendientes.length) {
+        listaVieja = false;
+        ultimoGuardado = 0;
+        await cargar();
       }
     }
 
@@ -325,7 +335,7 @@
       }
       const op = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
       if (DEMO) g.ingresaron = actual + delta;
-      else pendientes.push({ id, delta, op });
+      else pendientes.push({ id, nombre: g.nombre, delta, op });
       guardado.escribir("pendientes", pendientes);
       guardado.escribir("datos", datos);
       render();
