@@ -655,8 +655,14 @@ const festejarGol = (function () {
     totalEl.querySelector("strong").textContent = formatoPesos(m);
   }
   const avisoCuota2 = form.querySelector("[data-aviso-cuota2]");
+  // Con la 2ª cuota el lugar ya está confirmado: solo se manda el comprobante
+  const esSegunda = () => tipoPago() === "2ª cuota";
+  const textoBoton = () => (esSegunda() ? "Enviar comprobante de la 2ª cuota" : "Confirmar mi lugar");
+  const paso3 = document.querySelector("[data-paso3]");
   function alCambiarPago() {
-    avisoCuota2.hidden = tipoPago() !== "2ª cuota";
+    avisoCuota2.hidden = !esSegunda();
+    if (!submitBtn.disabled) submitLabel.textContent = textoBoton();
+    paso3.textContent = esSegunda() ? "Enviá el comprobante" : "Confirmá tu lugar";
     actualizarTotal();
   }
   form.querySelectorAll('input[name="pago"]').forEach((r) => r.addEventListener("change", alCambiarPago));
@@ -749,7 +755,7 @@ const festejarGol = (function () {
 
   function cargando(si) {
     submitBtn.disabled = si;
-    submitLabel.textContent = si ? "Enviando…" : "Confirmar mi lugar";
+    submitLabel.textContent = si ? "Enviando…" : textoBoton();
   }
 
   form.addEventListener("submit", async (e) => {
@@ -796,8 +802,10 @@ const festejarGol = (function () {
       form.hidden = true;
       ok.hidden = false;
       ok.querySelector("[data-ok-cuota]").hidden = datos.pago !== "1ª cuota";
+      const segunda = datos.pago === "2ª cuota";
+      ok.querySelector("[data-ok-title]").textContent = segunda ? "¡Listo, recibimos tu 2ª cuota! 🏑" : "¡Ya estás en la lista! 🏑";
       ok.scrollIntoView({ behavior: "smooth", block: "center" });
-      festejarGol("¡Ya estás en la lista!");
+      festejarGol(segunda ? "¡Recibimos tu 2ª cuota!" : "¡Ya estás en la lista!");
     } catch (err) {
       console.error(err);
       mostrarError(
