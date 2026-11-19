@@ -572,7 +572,7 @@ function evaluarTexto(texto, esperado) {
 
   const problemas = [];
   if (!tieneMonto) {
-    const vistos = montos.filter((m) => m >= 1000 && !(m >= 2020 && m <= 2030)).slice(0, 3).map(pesos); // sin años
+    const vistos = montos.slice(0, 3).map(pesos);
     problemas.push('no aparece ' + pesos(esperado) + (vistos.length ? ' (vi ' + vistos.join(', ') + ')' : ''));
   }
   if (!tieneDestino) problemas.push('no aparece Delfina Palacios ni el alias');
@@ -581,13 +581,16 @@ function evaluarTexto(texto, esperado) {
   return { ok: true, texto: '✅ Leído: ' + pesos(esperado) + ' a Delfina Palacios' };
 }
 
-// Todos los importes escritos en el texto: "$ 35.000", "35.000,00", "35000", "$35 000"…
+// Los importes del texto: solo los que tienen "$" (o "ARS") adelante, para no confundir el CUIL,
+// el CBU, el número de operación o la fecha con un monto. "$ 35.000", "$35.000,00", "ARS 35000"…
 function montosDe(texto) {
   const out = [];
-  (texto.match(/\d{1,3}(?:[ .,]\d{3})+(?:[.,]\d{1,2})?|\d+(?:[.,]\d{1,2})?/g) || []).forEach((t) => {
-    const sinDecimales = t.replace(/[.,]\d{1,2}$/, '');
+  const re = /(?:\$|\bars)\s*(\d{1,3}(?:[ .,]\d{3})+(?:[.,]\d{1,2})?|\d+(?:[.,]\d{1,2})?)/g;
+  let m;
+  while ((m = re.exec(texto))) {
+    const sinDecimales = m[1].replace(/[.,]\d{1,2}$/, '');
     out.push(Number(sinDecimales.replace(/[ .,]/g, '')));
-  });
+  }
   return out;
 }
 
