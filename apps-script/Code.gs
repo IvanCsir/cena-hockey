@@ -534,6 +534,13 @@ function revisarComprobante(link, esperado) {
   return evaluarTexto(texto, esperado);
 }
 
+// Ejecutar una vez desde el editor si "Verificar" dice que falta un permiso: hace lo mismo que la
+// lectura de comprobantes con un texto de prueba, así Google pide los permisos de Drive y Documentos.
+function probarPermisos() {
+  const texto = textoDelArchivo(Utilities.newBlob('Prueba de permisos', 'text/plain', 'prueba.txt'));
+  Logger.log('Todo bien, se leyó: ' + texto.trim());
+}
+
 // Reconocimiento de texto de Drive: convierte la imagen o el PDF en un documento temporal y lo lee
 function textoDelArchivo(blob) {
   const DOC = 'application/vnd.google-apps.document';
