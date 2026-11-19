@@ -39,7 +39,7 @@ const COLUMNAS = [
   'Fecha', 'Nombre y apellido', 'Teléfono', 'Pago',
   ...CATEGORIAS,
   'Total entradas', 'Monto', 'Titular de la cuenta', 'Comprobante', 'Miniatura',
-  'Quiénes van', 'Comentarios', 'Pago verificado', 'Ingresaron',
+  'Quiénes van', 'Comentarios', 'Pago verificado', 'Ingresaron', 'Chequeo comprobante',
 ];
 const col = (nombre) => COLUMNAS.indexOf(nombre) + 1;
 const COL_COMPROBANTE = col('Comprobante');
@@ -49,11 +49,26 @@ const COL_MONTO = col('Monto');
 const ALTO_FILA_CON_MINIATURA = 110; // píxeles
 
 function doPost(e) {
+  let d;
+  try {
+    d = JSON.parse(e.postData.contents);
+  } catch (err) {
+    return responder({ ok: false, error: 'Datos inválidos' });
+  }
+
+  // Página de ingreso → Pagos: leer un comprobante tarda unos segundos, así que no se
+  // toma el bloqueo general (el formulario sigue funcionando mientras tanto).
+  if (d.accion === 'verificar') {
+    try {
+      return verificarPagos(d);
+    } catch (err) {
+      return responder({ ok: false, error: String(err) });
+    }
+  }
+
   const lock = LockService.getScriptLock();
   lock.waitLock(30000);
   try {
-    const d = JSON.parse(e.postData.contents);
-
     // Página de ingreso (/puerta): marcar quién entró
     if (d.accion === 'ingreso') return marcarIngreso(d);
 
@@ -244,23 +259,35 @@ function claveOk(clave) {
   return !!real && String(clave || '') === real;
 }
 
-// Columna "Ingresaron": si la planilla es anterior a la página de ingreso, se agrega al final.
-function columnaIngresaron(hoja) {
+// Columnas agregadas después ("Ingresaron", "Chequeo comprobante"): si la planilla es
+// anterior, se agregan al final.
+function asegurarColumna(hoja, nombre) {
   const enc = hoja.getRange(1, 1, 1, hoja.getLastColumn()).getValues()[0].map(String);
-  const i = enc.indexOf('Ingresaron');
+  const i = enc.indexOf(nombre);
   if (i >= 0) return i + 1;
   const c = hoja.getLastColumn() + 1;
-  hoja.getRange(1, c).setValue('Ingresaron').setFontWeight('bold').setBackground('#0a1a6e').setFontColor('#ffffff');
-  hoja.getRange(1, c, hoja.getMaxRows(), 1).setHorizontalAlignment('center');
+  hoja.getRange(1, c).setValue(nombre).setFontWeight('bold').setBackground('#0a1a6e').setFontColor('#ffffff');
+  if (nombre === 'Ingresaron') hoja.getRange(1, c, hoja.getMaxRows(), 1).setHorizontalAlignment('center');
+  else hoja.setColumnWidth(c, 300);
   return c;
+}
+
+function columnaIngresaron(hoja) {
+  return asegurarColumna(hoja, 'Ingresaron');
 }
 
 function leerFilas(hoja) {
   if (hoja.getLastRow() < 2) return [];
   columnaIngresaron(hoja);
+  asegurarColumna(hoja, 'Chequeo comprobante');
   const valores = hoja.getDataRange().getValues();
   const enc = valores[0].map(String);
   const v = (fila, nombre) => { const i = enc.indexOf(nombre); return i >= 0 ? fila[i] : ''; };
+  // El link al comprobante está como hipervínculo en el texto "Ver comprobante"
+  const iComp = enc.indexOf('Comprobante');
+  const links = iComp >= 0
+    ? hoja.getRange(2, iComp + 1, valores.length - 1, 1).getRichTextValues().map((x) => (x[0] && x[0].getLinkUrl()) || '')
+    : [];
   return valores.slice(1).map((r, k) => {
     const entradas = {};
     CATEGORIAS.forEach((c) => { const n = Number(v(r, c)) || 0; if (n > 0) entradas[c] = n; });
@@ -275,6 +302,8 @@ function leerFilas(hoja) {
       comentarios: String(v(r, 'Comentarios')),
       verificado: v(r, 'Pago verificado') === true,
       ingresaron: Number(v(r, 'Ingresaron')) || 0,
+      chequeo: String(v(r, 'Chequeo comprobante')),
+      link: links[k] || '',
     };
   }).filter((f) => f.nombre);
 }
@@ -349,9 +378,9 @@ function armarGrupos(filas) {
   const salida = grupos.map((g) => {
     const f = g.f;
     const total = totalDe(f.entradas);
-    const esperado = Object.keys(f.entradas).reduce((a, c) => a + (PRECIOS[c] || 0) * f.entradas[c], 0);
+    const esperado = esperadoDe(f.entradas);
     const todas = [f].concat(g.cuotas);
-    const pagado = todas.reduce((a, r) => a + (r.monto || (r.pago === 'Total' ? esperado : esperado / 2)), 0);
+    const pagado = todas.reduce((a, r) => a + (r.monto || montoEsperado(r.pago, esperado)), 0);
     const falta = Math.max(0, esperado - pagado);
     let estado = falta > 0 ? 'falta' : todas.every((r) => r.verificado) ? 'ok' : 'sinverificar';
     const notas = [];
@@ -371,6 +400,8 @@ function armarGrupos(filas) {
       estado: estado,
       falta: falta,
       filas: todas.map((r) => r.fila),
+      esperado: esperado,
+      cuotas: todas.map((r) => resumenCuota(r, esperado)),
       nota: notas.join(' '),
     };
   });
@@ -389,6 +420,8 @@ function armarGrupos(filas) {
       estado: 'revisar',
       falta: 0,
       filas: [s.fila],
+      esperado: 0,
+      cuotas: [resumenCuota(s, esperadoDe(s.entradas))],
       nota: '2ª cuota sin unir a su 1ª cuota' +
         (x.dudosos.length ? ' (¿fila ' + x.dudosos.map((g) => g.f.fila).join(' o ') + '?)' : '') +
         '. Corregí el teléfono o el nombre en Inscriptos para que coincidan con la 1ª cuota.',
@@ -421,6 +454,138 @@ function marcarIngreso(d) {
     if (d.op) cache.put(op, '1', 21600);
   }
   return responder({ ok: true, id: fila.fila, ingresaron: actual });
+}
+
+function esperadoDe(entradas) {
+  return Object.keys(entradas).reduce((a, c) => a + (PRECIOS[c] || 0) * entradas[c], 0);
+}
+
+// Cuánto tendría que decir el comprobante de esa fila (cada cuota es la mitad)
+function montoEsperado(pago, esperado) {
+  return pago === 'Total' ? esperado : esperado / 2;
+}
+
+function resumenCuota(r, esperado) {
+  return {
+    fila: r.fila,
+    pago: r.pago,
+    monto: montoEsperado(r.pago, esperado),
+    verificado: r.verificado,
+    chequeo: r.chequeo || '',
+    link: r.link || '',
+  };
+}
+
+/* ═════════════════════ VERIFICAR PAGOS (apartado "Pagos" de /puerta) ═════════════════════
+ * Lee el texto de cada comprobante sin verificar con el reconocimiento de texto de Google
+ * Drive (gratis, no sale de tu Drive) y busca el monto que corresponde y a la destinataria.
+ * Si encuentra las dos cosas, tilda "Pago verificado". Lo que vio queda en "Chequeo comprobante".
+ * Hace falta activar una vez el servicio "Drive API": en el editor, Servicios (+) → Drive API → Agregar.
+ * ═════════════════════════════════════════════════════════════════════════════════════════ */
+
+// Tienen que coincidir con CONFIG.pago en js/main.js
+const DESTINO = { nombre: ['delfina', 'palacios'], alias: 'delfi.palacios123' };
+
+function verificarPagos(d) {
+  if (!claveOk(d.clave)) return responder({ ok: false, error: 'clave' });
+  const hoja = obtenerHoja();
+  const grupo = buscarGrupo(hoja, d);
+  if (!grupo) return responder({ ok: false, error: 'cambio' });
+  if (!d.aMano && typeof Drive === 'undefined') {
+    return responder({ ok: false, error: 'Falta activar el servicio "Drive API" en el Apps Script' });
+  }
+
+  const colVerif = asegurarColumna(hoja, 'Pago verificado');
+  const colChequeo = asegurarColumna(hoja, 'Chequeo comprobante');
+  grupo.cuotas.filter((c) => !c.verificado).forEach((c) => {
+    const r = d.aMano
+      ? { ok: true, texto: '✅ Verificado a mano · ' + Utilities.formatDate(new Date(), 'America/Argentina/Mendoza', 'dd/MM HH:mm') }
+      : revisarComprobante(c.link, c.monto);
+    const lock = LockService.getScriptLock();
+    lock.waitLock(30000);
+    try {
+      hoja.getRange(c.fila, colChequeo).setValue(r.texto);
+      if (r.ok) hoja.getRange(c.fila, colVerif).setValue(true);
+    } finally {
+      lock.releaseLock();
+    }
+  });
+
+  return responder({ ok: true, grupo: buscarGrupo(hoja, d) });
+}
+
+// La compra (fila de la 1ª cuota o del total) con sus cuotas; null si esa fila ya es de otra persona
+function buscarGrupo(hoja, d) {
+  const grupo = armarGrupos(leerFilas(hoja)).grupos.filter((g) => g.id === Number(d.fila))[0];
+  if (!grupo) return null;
+  if (d.nombre && palabras(d.nombre).join(' ') !== palabras(grupo.nombre).join(' ')) return null;
+  return grupo;
+}
+
+function revisarComprobante(link, esperado) {
+  const id = (String(link).match(/\/d\/([\w-]+)/) || String(link).match(/[?&]id=([\w-]+)/) || [])[1];
+  if (!id) return { ok: false, texto: '⚠️ No hay comprobante' };
+  let texto;
+  try {
+    texto = textoDelArchivo(DriveApp.getFileById(id).getBlob());
+  } catch (e) {
+    return { ok: false, texto: '⚠️ No se pudo leer el comprobante (' + String(e.message || e).slice(0, 80) + ')' };
+  }
+  return evaluarTexto(texto, esperado);
+}
+
+// Reconocimiento de texto de Drive: convierte la imagen o el PDF en un documento temporal y lo lee
+function textoDelArchivo(blob) {
+  const DOC = 'application/vnd.google-apps.document';
+  const nombre = 'ocr-temporal-' + Date.now();
+  const doc = Drive.Files.create
+    ? Drive.Files.create({ name: nombre, mimeType: DOC }, blob, { ocrLanguage: 'es' })      // Drive API v3
+    : Drive.Files.insert({ title: nombre, mimeType: DOC }, blob, { ocr: true, ocrLanguage: 'es' }); // v2
+  try {
+    return DocumentApp.openById(doc.id).getBody().getText();
+  } finally {
+    DriveApp.getFileById(doc.id).setTrashed(true);
+  }
+}
+
+/**
+ * Decide con el texto del comprobante. Separada de Drive para poder probarla sola.
+ * OK si aparece el monto esperado y la destinataria (nombre o alias), y no dice pendiente/rechazado.
+ */
+function evaluarTexto(texto, esperado) {
+  const plano = String(texto || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  if (plano.replace(/\s/g, '').length < 10) return { ok: false, texto: '⚠️ No se pudo leer texto en el comprobante' };
+
+  const montos = montosDe(plano);
+  const tieneMonto = montos.some((m) => Math.abs(m - esperado) <= 1);
+  const alias = DESTINO.alias.replace(/\W/g, '');
+  const tieneDestino = plano.replace(/[^a-z0-9]/g, '').indexOf(alias) >= 0 ||
+    DESTINO.nombre.every((p) => new RegExp('\\b' + p).test(plano));
+  const raro = (plano.match(/\b(pendiente|rechazad[oa]|cancelad[oa]|en proceso|no se pudo)\b/) || [])[0];
+
+  const problemas = [];
+  if (!tieneMonto) {
+    const vistos = montos.filter((m) => m >= 1000 && !(m >= 2020 && m <= 2030)).slice(0, 3).map(pesos); // sin años
+    problemas.push('no aparece ' + pesos(esperado) + (vistos.length ? ' (vi ' + vistos.join(', ') + ')' : ''));
+  }
+  if (!tieneDestino) problemas.push('no aparece Delfina Palacios ni el alias');
+  if (raro) problemas.push('dice "' + raro + '"');
+  if (problemas.length) return { ok: false, texto: '⚠️ ' + problemas.join('; ') };
+  return { ok: true, texto: '✅ Leído: ' + pesos(esperado) + ' a Delfina Palacios' };
+}
+
+// Todos los importes escritos en el texto: "$ 35.000", "35.000,00", "35000", "$35 000"…
+function montosDe(texto) {
+  const out = [];
+  (texto.match(/\d{1,3}(?:[ .,]\d{3})+(?:[.,]\d{1,2})?|\d+(?:[.,]\d{1,2})?/g) || []).forEach((t) => {
+    const sinDecimales = t.replace(/[.,]\d{1,2}$/, '');
+    out.push(Number(sinDecimales.replace(/[ .,]/g, '')));
+  });
+  return out;
+}
+
+function pesos(n) {
+  return '$' + Math.round(Number(n) || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 }
 
 function totalDe(entradas) {

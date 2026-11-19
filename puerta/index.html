@@ -92,6 +92,27 @@
 
     .toast { position: fixed; left: 50%; bottom: max(18px, env(safe-area-inset-bottom)); transform: translate(-50%, 20px); opacity: 0; transition: .25s; background: var(--azul); color: #fff; padding: 12px 18px; border-radius: 12px; font-size: .9rem; font-weight: 600; box-shadow: 0 8px 24px rgba(0, 0, 0, .25); max-width: calc(100% - 32px); text-align: center; z-index: 10; pointer-events: none; }
     .toast.is-visible { opacity: 1; transform: translate(-50%, 0); }
+    /* Pestañas Ingreso / Pagos */
+    .tabs { display: flex; gap: 6px; max-width: 720px; margin: 12px auto 0; }
+    .tabs button { flex: 1; height: 38px; border: 0; border-radius: 10px; background: rgba(255, 255, 255, .12); color: #dfe4ff; font-weight: 700; font-size: .9rem; }
+    .tabs button[aria-pressed="true"] { background: #fff; color: var(--azul); }
+    .tabs__n { display: inline-block; min-width: 20px; margin-left: 4px; padding: 1px 6px; border-radius: 999px; background: var(--rojo); color: #fff; font-size: .72rem; }
+
+    /* Apartado Pagos */
+    .cuotas { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 8px; }
+    .cuota { padding: 9px 10px; border-radius: 10px; background: #f4f6ff; font-size: .88rem; }
+    .cuota.is-ok { background: var(--ok-bg); }
+    .cuota__fila { display: flex; justify-content: space-between; gap: 8px; }
+    .cuota__est { font-size: .78rem; font-weight: 700; white-space: nowrap; }
+    .cuota__chequeo { margin: 5px 0 0; font-size: .8rem; color: var(--ok); line-height: 1.4; }
+    .cuota__chequeo.is-mal { color: var(--falta); }
+    .cuota a { display: inline-block; margin-top: 5px; font-size: .8rem; font-weight: 600; color: var(--royal); }
+    .acciones { display: flex; gap: 8px; margin-top: 12px; }
+    .acciones button, .lote { flex: 1; min-height: 46px; border: 0; border-radius: 12px; background: var(--royal); color: #fff; font-weight: 700; font-size: .95rem; padding: 0 12px; }
+    .acciones .secundario { background: #fff; color: var(--azul); border: 1px solid var(--linea); }
+    .acciones button:disabled, .lote:disabled { opacity: .6; cursor: default; }
+    .lote { width: 100%; margin-bottom: 4px; }
+
     .demo { background: #ffd27a; color: #4a3500; text-align: center; font-size: .78rem; font-weight: 700; padding: 6px; }
   </style>
 </head>
@@ -109,6 +130,10 @@
         <span>ingresaron</span>
       </div>
     </div>
+    <nav class="tabs" data-tabs hidden>
+      <button type="button" data-tab="ingreso" aria-pressed="true">Ingreso</button>
+      <button type="button" data-tab="pagos" aria-pressed="false">Pagos<span class="tabs__n" data-pend-n hidden></span></button>
+    </nav>
     <div class="buscar" data-buscar hidden>
       <input type="text" placeholder="Nombre, apellido o categoría" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" aria-label="Buscar" data-q>
       <button type="button" aria-label="Borrar búsqueda" data-limpiar hidden>✕</button>
@@ -161,12 +186,13 @@
     }
 
     let clave = DEMO ? "demo" : guardado.leer("clave", "");
-    let datos = guardado.leer("datos", null);          // { grupos, totales, actualizado }
+    let datos = DEMO ? null : guardado.leer("datos", null);          // { grupos, totales, actualizado }
     let pendientes = guardado.leer("pendientes", []);  // toques todavía no guardados en la planilla
     let ultimoGuardado = 0;
     let enviando = false;
     let aviso = "";
     let listaVieja = false;
+    let vista = guardado.leer("vista", "ingreso") === "pagos" ? "pagos" : "ingreso";
 
     const pesos = (n) => "$ " + Number(n).toLocaleString("es-AR");
     const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -373,11 +399,109 @@
         </article>`;
     }
 
+    // ───────── Pagos: verificar comprobantes ─────────
+    const verificando = new Set();
+    let loteTxt = "";
+    const pendientePago = (g) => !g.suelta && (g.cuotas || []).some((c) => !c.verificado);
+    const sinRevisar = (g) => pendientePago(g) && g.cuotas.some((c) => !c.verificado && !c.chequeo);
+
+    function tarjetaPago(g) {
+      const chips = Object.keys(g.entradas || {}).map((c) => `<span class="chip">${esc(c)} ×${g.entradas[c]}</span>`).join("");
+      const cuotas = (g.cuotas || []).map((c) => `
+        <li class="cuota${c.verificado ? " is-ok" : ""}">
+          <div class="cuota__fila"><span><b>${esc(c.pago)}</b> · ${pesos(c.monto)}</span><span class="cuota__est">${c.verificado ? "✅ Verificado" : "⏳ Sin verificar"}</span></div>
+          ${c.chequeo ? `<p class="cuota__chequeo${/^⚠/.test(c.chequeo) ? " is-mal" : ""}">${esc(c.chequeo)}</p>` : ""}
+          ${/^https:\/\//.test(c.link || "") ? `<a href="${esc(c.link)}" target="_blank" rel="noopener">Ver comprobante ↗</a>` : ""}
+        </li>`).join("");
+      const leyendo = verificando.has(g.id);
+      const hayMal = g.cuotas.some((c) => !c.verificado && /^⚠/.test(c.chequeo));
+      return `
+        <article class="g g--${g.estado}">
+          <div class="g__top">
+            <h2>${esc(g.nombre)}</h2>
+            <span class="estado estado--${g.estado}">${ESTADOS[g.estado](g)}</span>
+          </div>
+          <p class="g__meta">${chips}<span>Total ${pesos(g.esperado || 0)}</span><span>Fila ${g.filas.join(" + ")}</span></p>
+          <ul class="cuotas">${cuotas}</ul>
+          <div class="acciones">
+            <button type="button" data-verificar="${g.id}" ${leyendo || loteTxt ? "disabled" : ""}>${leyendo ? "Leyendo comprobante…" : "🔍 Verificar"}</button>
+            ${hayMal ? `<button type="button" class="secundario" data-amano="${g.id}" ${leyendo || loteTxt ? "disabled" : ""}>Verificar a mano</button>` : ""}
+          </div>
+        </article>`;
+    }
+
+    // Lee los comprobantes sin verificar de esa compra; si coinciden, tilda "Pago verificado".
+    // Devuelve true si respondió, false si hubo un error y null si no hay conexión.
+    async function verificar(id, aMano, enLote) {
+      const g = datos.grupos.find((x) => x.id === id);
+      if (!g || verificando.has(id)) return false;
+      if (aMano && !confirm(`¿Marcar como verificado el pago de ${g.nombre}?`)) return false;
+      verificando.add(id);
+      render();
+      try {
+        let json;
+        if (DEMO) {
+          await new Promise((r) => setTimeout(r, 900));
+          json = { ok: true, grupo: demoVerificar(g, aMano) };
+        } else {
+          const res = await fetch(URL_SCRIPT, {
+            method: "POST",
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify({ accion: "verificar", clave, fila: id, nombre: g.nombre, aMano: !!aMano }),
+          });
+          json = await res.json();
+        }
+        if (json.error === "clave") { pedirClave(true); return false; }
+        if (json.error === "cambio") {
+          alert("La planilla cambió. La lista se va a actualizar: buscalo de nuevo y volvé a verificar.");
+          await cargar();
+          return false;
+        }
+        if (!json.ok) { toast("No se pudo verificar: " + json.error); return false; }
+        const i = datos.grupos.findIndex((x) => x.id === id);
+        if (i >= 0 && json.grupo) datos.grupos[i] = json.grupo;
+        guardado.escribir("datos", datos);
+        if (!enLote) {
+          const listo = json.grupo && json.grupo.cuotas.every((c) => c.verificado);
+          toast(listo ? `✅ ${g.nombre}: pago verificado` : `⚠️ ${g.nombre}: hay que revisarlo`);
+        }
+        return true;
+      } catch (e) {
+        toast("Sin conexión: no se pudo verificar");
+        return null;
+      } finally {
+        verificando.delete(id);
+        render();
+      }
+    }
+
+    async function verificarTodos() {
+      const cola = datos.grupos.filter(sinRevisar).map((g) => g.id);
+      if (!cola.length) return toast("No hay pagos sin revisar");
+      let bien = 0;
+      let mal = 0;
+      for (let i = 0; i < cola.length; i++) {
+        loteTxt = `Verificando ${i + 1} de ${cola.length}…`;
+        const r = await verificar(cola[i], false, true);
+        if (r === null) break;
+        const g = datos.grupos.find((x) => x.id === cola[i]);
+        if (g && g.cuotas.every((c) => c.verificado)) bien++; else mal++;
+      }
+      loteTxt = "";
+      render();
+      toast(`Listo: ${bien} verificados${mal ? `, ${mal} para revisar` : ""}`);
+    }
+
     function render() {
       if (!datos) return mostrarSync();
       $("[data-buscar]").hidden = false;
       $("[data-contador]").hidden = false;
+      $("[data-tabs]").hidden = false;
       $("[data-pie]").hidden = DEMO;
+      document.querySelectorAll("[data-tab]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.tab === vista)));
+      const pend = datos.grupos.filter(pendientePago).length;
+      $("[data-pend-n]").hidden = !pend;
+      $("[data-pend-n]").textContent = pend;
 
       const total = datos.grupos.reduce((a, g) => a + g.total, 0);
       const dentro = datos.grupos.reduce((a, g) => a + ingresaron(g), 0);
@@ -392,6 +516,17 @@
       lista.sort((a, b) => norm(a.nombre).localeCompare(norm(b.nombre)));
 
       const el = $("[data-lista]");
+      if (vista === "pagos") {
+        lista = lista.filter(pendientePago);
+        const nuevos = datos.grupos.filter(sinRevisar).length;
+        el.innerHTML =
+          `<p class="ayuda">Lee cada comprobante y busca el monto que corresponde y a Delfina Palacios. Si encuentra los dos, tilda <b>Pago verificado</b> en la planilla.</p>` +
+          (nuevos || loteTxt ? `<button type="button" class="lote" data-todos ${loteTxt ? "disabled" : ""}>${loteTxt || `🔍 Verificar todos los sin revisar (${nuevos})`}</button>` : "") +
+          (lista.length
+            ? lista.slice(0, MAX_TARJETAS).map(tarjetaPago).join("")
+            : `<p class="ayuda">${q.length ? "No hay pagos sin verificar con ese nombre." : "✓ Todos los pagos están verificados."}</p>`);
+        return mostrarSync();
+      }
       if (!lista.length) {
         el.innerHTML = `<p class="ayuda">${q.length ? "No hay nadie con ese nombre.<br>Probá con el apellido, la categoría (por ej. <b>8va</b>) o preguntá quién le compró la entrada." : "Todavía no hay inscriptos."}</p>`;
       } else {
@@ -410,6 +545,7 @@
       $("[data-login-error]").hidden = !error;
       $("[data-buscar]").hidden = true;
       $("[data-contador]").hidden = true;
+      $("[data-tabs]").hidden = true;
       $("[data-pie]").hidden = true;
       $("[data-lista]").innerHTML = "";
       $("[data-sync]").textContent = "Falta la clave";
@@ -434,7 +570,18 @@
       const menos = e.target.closest("[data-menos]");
       if (mas) marcar(Number(mas.dataset.mas), 1);
       if (menos) marcar(Number(menos.dataset.menos), -1);
+      const ver = e.target.closest("[data-verificar]");
+      const amano = e.target.closest("[data-amano]");
+      if (ver) verificar(Number(ver.dataset.verificar), false);
+      if (amano) verificar(Number(amano.dataset.amano), true);
+      if (e.target.closest("[data-todos]")) verificarTodos();
     });
+    document.querySelectorAll("[data-tab]").forEach((b) => b.addEventListener("click", () => {
+      vista = b.dataset.tab;
+      guardado.escribir("vista", vista);
+      render();
+      window.scrollTo(0, 0);
+    }));
     $("[data-actualizar]").addEventListener("click", async () => {
       $("[data-sync]").textContent = "Actualizando…";
       toast((await sincronizar()) ? "✓ Lista actualizada" : "Sin conexión: se muestra la última lista");
@@ -455,11 +602,32 @@
     if (!clave) pedirClave(false);
     else { render(); sincronizar(); }
 
+    // Demo: simula la lectura (a Lucía le "falta" el monto, para ver cómo queda un caso a revisar)
+    function demoVerificar(g, aMano) {
+      const n = JSON.parse(JSON.stringify(g));
+      n.cuotas.forEach((c) => {
+        if (c.verificado) return;
+        if (!aMano && /Lucía/.test(g.nombre)) { c.chequeo = "⚠️ no aparece $35.000 (vi $17.500)"; return; }
+        c.verificado = true;
+        c.chequeo = aMano ? "✅ Verificado a mano" : `✅ Leído: ${pesos(c.monto)} a Delfina Palacios`;
+      });
+      if (n.estado === "sinverificar" && n.cuotas.every((c) => c.verificado)) n.estado = "ok";
+      return n;
+    }
+
     function datosDemo() {
-      const g = (id, nombre, quienes, tel, entradas, estado, falta, extra) => Object.assign({
-        id, nombre, quienes, tel, entradas, estado, falta, filas: [id], nota: "",
-        total: Object.values(entradas).reduce((a, b) => a + b, 0), ingresaron: 0,
-      }, extra || {});
+      const PRECIO = { "7ma": 35000, "8va": 35000, "9na": 35000, "10ma": 35000, "6ta": 70000, "5ta": 70000, PS: 70000 };
+      const g = (id, nombre, quienes, tel, entradas, estado, falta, extra) => {
+        const esperado = Object.keys(entradas).reduce((a, c) => a + PRECIO[c] * entradas[c], 0);
+        const cuota = (pago, monto, verificado) => ({ fila: id, pago, monto, verificado, chequeo: verificado ? `✅ Leído: ${pesos(monto)} a Delfina Palacios` : "", link: "" });
+        return Object.assign({
+          id, nombre, quienes, tel, entradas, estado, falta, filas: [id], nota: "", esperado,
+          total: Object.values(entradas).reduce((a, b) => a + b, 0), ingresaron: 0,
+          cuotas: estado === "ok" ? [cuota("Total", esperado, true)]
+            : estado === "sinverificar" ? [cuota("1ª cuota", esperado / 2, true), cuota("2ª cuota", esperado / 2, false)]
+            : [cuota("1ª cuota", esperado / 2, false)],
+        }, extra || {});
+      };
       return {
         actualizado: new Date().toISOString(),
         grupos: [
