@@ -394,6 +394,7 @@ function armarGrupos(filas) {
       nombre: f.nombre,
       quienes: f.quienes,
       tel: ultimos4(f.telefono),
+      telefono: f.telefono, // completo, para el recordatorio por WhatsApp de la 2ª cuota
       entradas: f.entradas,
       total: total,
       ingresaron: Math.min(f.ingresaron, total),

@@ -112,6 +112,11 @@
     .acciones .secundario { background: #fff; color: var(--azul); border: 1px solid var(--linea); }
     .acciones button:disabled, .lote:disabled { opacity: .6; cursor: default; }
     .lote { width: 100%; margin-bottom: 4px; }
+    .filtros { display: flex; gap: 6px; margin-bottom: 4px; }
+    .filtros button { flex: 1; height: 40px; border: 1px solid var(--linea); border-radius: 10px; background: #fff; color: var(--azul); font-weight: 700; font-size: .85rem; }
+    .filtros button[aria-pressed="true"] { background: var(--azul); color: #fff; border-color: var(--azul); }
+    .wsp { flex: 1; display: flex; align-items: center; justify-content: center; min-height: 46px; border-radius: 12px; background: #1fa855; color: #fff; font-weight: 700; font-size: .95rem; text-decoration: none; padding: 0 12px; text-align: center; }
+    .is-completo .wsp { background: #fff; color: #157a3c; border: 1px solid #b9e3c8; }
 
     .demo { background: #ffd27a; color: #4a3500; text-align: center; font-size: .78rem; font-weight: 700; padding: 6px; }
   </style>
@@ -193,6 +198,7 @@
     let aviso = "";
     let listaVieja = false;
     let vista = guardado.leer("vista", "ingreso") === "pagos" ? "pagos" : "ingreso";
+    let filtroPagos = guardado.leer("filtroPagos", "sinverificar") === "falta" ? "falta" : "sinverificar";
 
     const pesos = (n) => "$ " + Number(n).toLocaleString("es-AR");
     const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -403,6 +409,64 @@
     const verificando = new Set();
     let loteTxt = "";
     const pendientePago = (g) => !g.suelta && (g.cuotas || []).some((c) => !c.verificado);
+    // Los "Revisar" no entran: puede que ya hayan pagado y su 2ª cuota esté sin unir
+    const faltaSegunda = (g) => !g.suelta && g.estado === "falta";
+
+    // ───────── Recordatorio de la 2ª cuota por WhatsApp ─────────
+    // Tienen que coincidir con CONFIG en js/main.js
+    const RECORDATORIO = {
+      vence: "10 de diciembre",
+      alias: "delfi.palacios123",
+      titular: "Delfina Nahir Palacios Gomez",
+      link: "https://is.gd/hgCobI", // link corto a la invitación (el mismo del evento del calendario)
+    };
+    let enviados = guardado.leer("enviados", {}); // { id: fecha en que se abrió el WhatsApp }
+
+    // Teléfono argentino → número para wa.me (549 + código de área + número, sin 0 ni 15)
+    function numeroWhatsApp(tel) {
+      let d = String(tel || "").replace(/\D/g, "");
+      if (d.startsWith("00")) d = d.slice(2);
+      if (d.startsWith("54")) d = d.slice(2);
+      if (d.startsWith("9") && d.length === 11) d = d.slice(1);
+      if (d.startsWith("0")) d = d.slice(1);
+      if (d.length === 12) {
+        for (const n of [2, 3, 4]) {
+          if (d.substr(n, 2) === "15") { d = d.slice(0, n) + d.slice(n + 2); break; }
+        }
+      }
+      // Sin código de área (por ej. 15 555-1234): se asume Mendoza
+      if (d.length === 9 && d.startsWith("15")) d = d.slice(2);
+      if (d.length === 7) d = "261" + d;
+      return d.length === 10 ? "549" + d : "";
+    }
+
+    function mensajeRecordatorio(g) {
+      const nombre = String(g.nombre).trim().split(/\s+/)[0];
+      return `¡Hola ${nombre}! 👋 Te recordamos que la 2ª cuota de la Cena de Fin de Año del Hockey (${pesos(g.falta)}) vence el ${RECORDATORIO.vence}.\n\n` +
+        `Alias: ${RECORDATORIO.alias} (${RECORDATORIO.titular})\n\n` +
+        `Después de pagar, cargá el comprobante en ${RECORDATORIO.link} eligiendo "2ª cuota". ¡Gracias!`;
+    }
+
+    function tarjetaRecordatorio(g) {
+      const chips = Object.keys(g.entradas || {}).map((c) => `<span class="chip">${esc(c)} ×${g.entradas[c]}</span>`).join("");
+      const num = numeroWhatsApp(g.telefono);
+      const enviado = enviados[g.id];
+      const cuando = enviado ? new Date(enviado).toLocaleString("es-AR", { day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit" }) : "";
+      return `
+        <article class="g g--falta${enviado ? " is-completo" : ""}">
+          <div class="g__top">
+            <h2>${esc(g.nombre)}</h2>
+            <span class="estado estado--falta">${ESTADOS.falta(g)}</span>
+          </div>
+          <p class="g__meta">${chips}<span>${g.telefono ? "Tel. " + esc(g.telefono) : "Sin teléfono"}</span></p>
+          ${num ? "" : `<p class="g__nota">${g.telefono ? "No se pudo armar el número de WhatsApp con ese teléfono." : "No cargó teléfono."} Buscalo en la fila ${g.filas[0]} de Inscriptos.</p>`}
+          <div class="acciones">
+            ${num
+              ? `<a class="wsp" href="https://wa.me/${num}?text=${encodeURIComponent(mensajeRecordatorio(g))}" target="_blank" rel="noopener" data-wsp="${g.id}">${enviado ? `✓ Enviado ${cuando} · Mandar de nuevo` : "📱 Enviar WhatsApp"}</a>`
+              : `<button type="button" disabled>📱 Sin número válido</button>`}
+          </div>
+        </article>`;
+    }
     const sinRevisar = (g) => pendientePago(g) && g.cuotas.some((c) => !c.verificado && !c.chequeo);
 
     function tarjetaPago(g) {
@@ -517,9 +581,25 @@
 
       const el = $("[data-lista]");
       if (vista === "pagos") {
+        const nSin = datos.grupos.filter(pendientePago).length;
+        const nFalta = datos.grupos.filter(faltaSegunda).length;
+        const filtros = `
+          <div class="filtros">
+            <button type="button" data-filtro="sinverificar" aria-pressed="${filtroPagos === "sinverificar"}">Sin verificar (${nSin})</button>
+            <button type="button" data-filtro="falta" aria-pressed="${filtroPagos === "falta"}">Falta 2ª cuota (${nFalta})</button>
+          </div>`;
+        if (filtroPagos === "falta") {
+          lista = lista.filter(faltaSegunda);
+          el.innerHTML = filtros +
+            `<p class="ayuda">Tocá <b>WhatsApp</b> y se abre el chat con el recordatorio ya escrito: solo tenés que enviarlo. Los que ya mandaste quedan marcados en este celular.</p>` +
+            (lista.length
+              ? lista.slice(0, MAX_TARJETAS).map(tarjetaRecordatorio).join("")
+              : `<p class="ayuda">${q.length ? "No hay nadie con ese nombre al que le falte pagar." : "✓ A nadie le falta la 2ª cuota."}</p>`);
+          return mostrarSync();
+        }
         lista = lista.filter(pendientePago);
         const nuevos = datos.grupos.filter(sinRevisar).length;
-        el.innerHTML =
+        el.innerHTML = filtros +
           `<p class="ayuda">Lee cada comprobante y busca el monto que corresponde y a Delfina Palacios. Si encuentra los dos, tilda <b>Pago verificado</b> en la planilla.</p>` +
           (nuevos || loteTxt ? `<button type="button" class="lote" data-todos ${loteTxt ? "disabled" : ""}>${loteTxt || `🔍 Verificar todos los sin revisar (${nuevos})`}</button>` : "") +
           (lista.length
@@ -575,6 +655,19 @@
       if (ver) verificar(Number(ver.dataset.verificar), false);
       if (amano) verificar(Number(amano.dataset.amano), true);
       if (e.target.closest("[data-todos]")) verificarTodos();
+      const filtro = e.target.closest("[data-filtro]");
+      if (filtro) {
+        filtroPagos = filtro.dataset.filtro;
+        guardado.escribir("filtroPagos", filtroPagos);
+        render();
+      }
+      const wsp = e.target.closest("[data-wsp]");
+      if (wsp) {
+        // El link abre WhatsApp; acá solo se anota que ya se le mandó
+        enviados[wsp.dataset.wsp] = Date.now();
+        guardado.escribir("enviados", enviados);
+        setTimeout(render, 300);
+      }
     });
     document.querySelectorAll("[data-tab]").forEach((b) => b.addEventListener("click", () => {
       vista = b.dataset.tab;
@@ -633,10 +726,11 @@
         grupos: [
           g(2, "Martín González", "Martín (PS), Sofía y Juan González (8va)", "1234", { "8va": 2, PS: 1 }, "ok", 0, { filas: [2, 9] }),
           g(3, "Laura Gómez", "Valentina Pérez (9na)", "8812", { "9na": 1 }, "ok", 0),
-          g(4, "Lucía González", "", "4410", { "6ta": 1 }, "falta", 35000),
+          g(4, "Lucía González", "", "4410", { "6ta": 1 }, "falta", 35000, { telefono: "0261 15 444-1000" }),
           g(5, "Carolina Díaz", "Carolina y Pablo Díaz (PS)", "7720", { PS: 2 }, "sinverificar", 0),
           g(6, "Tomás Fernández", "", "3011", { "5ta": 1 }, "ok", 0, { ingresaron: 1 }),
           g(7, "Juan Pérez", "", "5590", { PS: 1 }, "revisar", 35000, { nota: "Puede que su 2ª cuota sea la fila 11 de Inscriptos." }),
+          g(9, "Sofía Romero", "", "", { "8va": 1 }, "falta", 17500, { telefono: "155" }),
           g(8, "Ana Sosa", "Ana Sosa (PS), Mateo Sosa (10ma)", "", { "10ma": 1, PS: 1 }, "ok", 0),
           g("s11", "Juan Perez García", "", "", { PS: 1 }, "revisar", 0, { suelta: true, total: 0, filas: [11], nota: "2ª cuota sin unir a su 1ª cuota (¿fila 7?). Corregí el teléfono o el nombre en Inscriptos para que coincidan con la 1ª cuota." }),
         ],
