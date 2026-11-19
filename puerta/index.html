@@ -113,7 +113,7 @@
     .acciones button:disabled, .lote:disabled { opacity: .6; cursor: default; }
     .lote { width: 100%; margin-bottom: 4px; }
     .filtros { display: flex; gap: 6px; margin-bottom: 4px; }
-    .filtros button { flex: 1; height: 40px; border: 1px solid var(--linea); border-radius: 10px; background: #fff; color: var(--azul); font-weight: 700; font-size: .85rem; }
+    .filtros button { flex: 1; min-width: 0; min-height: 40px; padding: 4px 6px; line-height: 1.15; border: 1px solid var(--linea); border-radius: 10px; background: #fff; color: var(--azul); font-weight: 700; font-size: .85rem; }
     .filtros button[aria-pressed="true"] { background: var(--azul); color: #fff; border-color: var(--azul); }
     .wsp { flex: 1; display: flex; align-items: center; justify-content: center; min-height: 46px; border-radius: 12px; background: #1fa855; color: #fff; font-weight: 700; font-size: .95rem; text-decoration: none; padding: 0 12px; text-align: center; }
     .is-completo .wsp { background: #fff; color: #157a3c; border: 1px solid #b9e3c8; }
@@ -198,7 +198,8 @@
     let aviso = "";
     let listaVieja = false;
     let vista = guardado.leer("vista", "ingreso") === "pagos" ? "pagos" : "ingreso";
-    let filtroPagos = guardado.leer("filtroPagos", "sinverificar") === "falta" ? "falta" : "sinverificar";
+    let filtroPagos = guardado.leer("filtroPagos", "sinverificar");
+    if (["sinverificar", "falta", "revisar"].indexOf(filtroPagos) < 0) filtroPagos = "sinverificar";
 
     const pesos = (n) => "$ " + Number(n).toLocaleString("es-AR");
     const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -485,12 +486,14 @@
             <h2>${esc(g.nombre)}</h2>
             <span class="estado estado--${g.estado}">${ESTADOS[g.estado](g)}</span>
           </div>
-          <p class="g__meta">${chips}<span>Total ${pesos(g.esperado || 0)}</span><span>Fila ${g.filas.join(" + ")}</span></p>
+          <p class="g__meta">${chips}${g.suelta ? "" : `<span>Total ${pesos(g.esperado || 0)}</span>`}<span>Fila ${g.filas.join(" + ")}</span></p>
+          ${g.nota ? `<p class="g__nota">${esc(g.nota)}</p>` : ""}
           <ul class="cuotas">${cuotas}</ul>
+          ${pendientePago(g) ? `
           <div class="acciones">
             <button type="button" data-verificar="${g.id}" ${leyendo || loteTxt ? "disabled" : ""}>${leyendo ? "Leyendo comprobante…" : "🔍 Verificar"}</button>
             ${hayMal ? `<button type="button" class="secundario" data-amano="${g.id}" ${leyendo || loteTxt ? "disabled" : ""}>Verificar a mano</button>` : ""}
-          </div>
+          </div>` : ""}
         </article>`;
     }
 
@@ -583,11 +586,22 @@
       if (vista === "pagos") {
         const nSin = datos.grupos.filter(pendientePago).length;
         const nFalta = datos.grupos.filter(faltaSegunda).length;
+        const nRevisar = datos.grupos.filter((g) => g.estado === "revisar").length;
         const filtros = `
           <div class="filtros">
             <button type="button" data-filtro="sinverificar" aria-pressed="${filtroPagos === "sinverificar"}">Sin verificar (${nSin})</button>
             <button type="button" data-filtro="falta" aria-pressed="${filtroPagos === "falta"}">Falta 2ª cuota (${nFalta})</button>
+            <button type="button" data-filtro="revisar" aria-pressed="${filtroPagos === "revisar"}">Revisar (${nRevisar})</button>
           </div>`;
+        if (filtroPagos === "revisar") {
+          lista = lista.filter((g) => g.estado === "revisar");
+          el.innerHTML = filtros +
+            `<p class="ayuda">Cuotas que no se pudieron unir solas (por ejemplo, una 2ª cuota con otro nombre o teléfono que la 1ª). Corregí el nombre o el teléfono en la planilla para que coincidan y estirá para actualizar.</p>` +
+            (lista.length
+              ? lista.slice(0, MAX_TARJETAS).map(tarjetaPago).join("")
+              : `<p class="ayuda">${q.length ? "No hay nada para revisar con ese nombre." : "✓ No hay nada para revisar."}</p>`);
+          return mostrarSync();
+        }
         if (filtroPagos === "falta") {
           lista = lista.filter(faltaSegunda);
           el.innerHTML = filtros +

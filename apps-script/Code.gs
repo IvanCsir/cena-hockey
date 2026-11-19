@@ -469,6 +469,7 @@ function montoEsperado(pago, esperado) {
 function resumenCuota(r, esperado) {
   return {
     fila: r.fila,
+    nombre: r.nombre, // para comprobar que la fila no se corrió antes de escribir en ella
     pago: r.pago,
     monto: montoEsperado(r.pago, esperado),
     verificado: r.verificado,
@@ -498,13 +499,25 @@ function verificarPagos(d) {
 
   const colVerif = asegurarColumna(hoja, 'Pago verificado');
   const colChequeo = asegurarColumna(hoja, 'Chequeo comprobante');
+  const colNombre = asegurarColumna(hoja, 'Nombre y apellido');
+  const colPago = asegurarColumna(hoja, 'Pago');
+  let filasCorridas = false;
   grupo.cuotas.filter((c) => !c.verificado).forEach((c) => {
+    if (filasCorridas) return;
     const r = d.aMano
       ? { ok: true, texto: '✅ Verificado a mano · ' + Utilities.formatDate(new Date(), 'America/Argentina/Mendoza', 'dd/MM HH:mm') }
       : revisarComprobante(c.link, c.monto);
     const lock = LockService.getScriptLock();
     lock.waitLock(30000);
     try {
+      // Leer el comprobante tarda unos segundos: si mientras tanto alguien borró u ordenó
+      // filas, ese número ya puede ser de otra persona. Se comprueba justo antes de escribir.
+      const nombre = String(hoja.getRange(c.fila, colNombre).getValue()).replace(/^'/, '');
+      const pago = String(hoja.getRange(c.fila, colPago).getValue()) || 'Total';
+      if (palabras(nombre).join(' ') !== palabras(c.nombre).join(' ') || pago !== c.pago) {
+        filasCorridas = true;
+        return;
+      }
       hoja.getRange(c.fila, colChequeo).setValue(r.texto);
       if (r.ok) hoja.getRange(c.fila, colVerif).setValue(true);
     } finally {
@@ -512,6 +525,7 @@ function verificarPagos(d) {
     }
   });
 
+  if (filasCorridas) return responder({ ok: false, error: 'cambio' });
   return responder({ ok: true, grupo: buscarGrupo(hoja, d) });
 }
 
