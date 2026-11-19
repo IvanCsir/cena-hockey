@@ -614,7 +614,7 @@
         lista = lista.filter(pendientePago);
         const nuevos = datos.grupos.filter(sinRevisar).length;
         el.innerHTML = filtros +
-          `<p class="ayuda">Lee cada comprobante y busca el monto que corresponde y a Delfina Palacios. Si encuentra los dos, tilda <b>Pago verificado</b> en la planilla.</p>` +
+          `<p class="ayuda">Lee cada comprobante y busca el monto que corresponde y el CVU o el nombre de Delfina. Si encuentra los dos, tilda <b>Pago verificado</b> en la planilla.</p>` +
           (nuevos || loteTxt ? `<button type="button" class="lote" data-todos ${loteTxt ? "disabled" : ""}>${loteTxt || `🔍 Verificar todos los sin revisar (${nuevos})`}</button>` : "") +
           (lista.length
             ? lista.slice(0, MAX_TARJETAS).map(tarjetaPago).join("")
@@ -716,7 +716,7 @@
         if (c.verificado) return;
         if (!aMano && /Lucía/.test(g.nombre)) { c.chequeo = "⚠️ no aparece $35.000 (vi $17.500)"; return; }
         c.verificado = true;
-        c.chequeo = aMano ? "✅ Verificado a mano" : `✅ Leído: ${pesos(c.monto)} a Delfina Palacios`;
+        c.chequeo = aMano ? "✅ Verificado a mano" : `✅ Leído: ${pesos(c.monto)} al CVU de Delfina`;
       });
       if (n.estado === "sinverificar" && n.cuotas.every((c) => c.verificado)) n.estado = "ok";
       return n;
@@ -726,7 +726,7 @@
       const PRECIO = { "7ma": 35000, "8va": 35000, "9na": 35000, "10ma": 35000, "6ta": 70000, "5ta": 70000, PS: 70000 };
       const g = (id, nombre, quienes, tel, entradas, estado, falta, extra) => {
         const esperado = Object.keys(entradas).reduce((a, c) => a + PRECIO[c] * entradas[c], 0);
-        const cuota = (pago, monto, verificado) => ({ fila: id, pago, monto, verificado, chequeo: verificado ? `✅ Leído: ${pesos(monto)} a Delfina Palacios` : "", link: "" });
+        const cuota = (pago, monto, verificado) => ({ fila: id, pago, monto, verificado, chequeo: verificado ? `✅ Leído: ${pesos(monto)} al CVU de Delfina` : "", link: "" });
         return Object.assign({
           id, nombre, quienes, tel, entradas, estado, falta, filas: [id], nota: "", esperado,
           total: Object.values(entradas).reduce((a, b) => a + b, 0), ingresaron: 0,

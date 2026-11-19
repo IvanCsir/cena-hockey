@@ -480,13 +480,15 @@ function resumenCuota(r, esperado) {
 
 /* ═════════════════════ VERIFICAR PAGOS (apartado "Pagos" de /puerta) ═════════════════════
  * Lee el texto de cada comprobante sin verificar con el reconocimiento de texto de Google
- * Drive (gratis, no sale de tu Drive) y busca el monto que corresponde y a la destinataria.
- * Si encuentra las dos cosas, tilda "Pago verificado". Lo que vio queda en "Chequeo comprobante".
+ * Drive (gratis, no sale de tu Drive) y busca el monto que corresponde y el CVU de la cuenta
+ * que recibe la plata. Si encuentra las dos cosas, tilda "Pago verificado". Lo que vio queda en
+ * "Chequeo comprobante".
  * Hace falta activar una vez el servicio "Drive API": en el editor, Servicios (+) → Drive API → Agregar.
  * ═════════════════════════════════════════════════════════════════════════════════════════ */
 
-// Tienen que coincidir con CONFIG.pago en js/main.js
-const DESTINO = { nombre: ['delfina', 'palacios'], alias: 'delfi.palacios123' };
+// CVU de la cuenta de Mercado Pago del alias de CONFIG.pago en js/main.js. Si el comprobante no
+// lo muestra, se acepta el nombre (ver evaluarTexto).
+const CVU_DESTINO = '0000003100073861727124';
 
 function verificarPagos(d) {
   if (!claveOk(d.clave)) return responder({ ok: false, error: 'clave' });
@@ -580,9 +582,13 @@ function evaluarTexto(texto, esperado) {
 
   const montos = montosDe(plano);
   const tieneMonto = montos.some((m) => Math.abs(m - esperado) <= 1);
-  const alias = DESTINO.alias.replace(/\W/g, '');
-  const tieneDestino = plano.replace(/[^a-z0-9]/g, '').indexOf(alias) >= 0 ||
-    DESTINO.nombre.every((p) => new RegExp('\\b' + p).test(plano));
+  // Primero el CVU (solo los dígitos, así coincide aunque el texto lo corte con espacios o guiones).
+  // Si no está, alcanza con el nombre: "Delf Palacios", "Delfina Palacios", "Delfina Nahir Palacios",
+  // o al revés ("Palacios Gomez Delfina").
+  const tieneCvu = plano.replace(/\D/g, '').indexOf(CVU_DESTINO) >= 0;
+  const tieneNombre = /\bdelf(?:ina)?\b[^\n]{0,20}?\bpalacios\b/.test(plano) ||
+    /\bpalacios\b[^\n]{0,20}?\bdelf(?:ina)?\b/.test(plano);
+  const tieneDestino = tieneCvu || tieneNombre;
   const raro = (plano.match(/\b(pendiente|rechazad[oa]|cancelad[oa]|en proceso|no se pudo)\b/) || [])[0];
 
   const problemas = [];
@@ -590,10 +596,10 @@ function evaluarTexto(texto, esperado) {
     const vistos = montos.slice(0, 3).map(pesos);
     problemas.push('no aparece ' + pesos(esperado) + (vistos.length ? ' (vi ' + vistos.join(', ') + ')' : ''));
   }
-  if (!tieneDestino) problemas.push('no aparece Delfina Palacios ni el alias');
+  if (!tieneDestino) problemas.push('no aparece el CVU de Delfina (…' + CVU_DESTINO.slice(-6) + ') ni su nombre');
   if (raro) problemas.push('dice "' + raro + '"');
   if (problemas.length) return { ok: false, texto: '⚠️ ' + problemas.join('; ') };
-  return { ok: true, texto: '✅ Leído: ' + pesos(esperado) + ' a Delfina Palacios' };
+  return { ok: true, texto: '✅ Leído: ' + pesos(esperado) + (tieneCvu ? ' al CVU de Delfina' : ' a Delfina Palacios') };
 }
 
 // Los importes del texto: solo los que tienen "$" (o "ARS") adelante, para no confundir el CUIL,
