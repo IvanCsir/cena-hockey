@@ -22,6 +22,9 @@
       --radio: 16px;
     }
     * { box-sizing: border-box; }
+    /* overscroll contain: el "estirar para actualizar" es propio (el del navegador recarga
+       la página entera, y sin señal la deja en blanco) */
+    html, body { overscroll-behavior-y: contain; }
     html { -webkit-text-size-adjust: 100%; }
     body { margin: 0; font-family: "Montserrat", system-ui, -apple-system, "Segoe UI", sans-serif; background: var(--fondo); color: var(--texto); }
     button { font: inherit; cursor: pointer; }
@@ -43,6 +46,12 @@
     .buscar button { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 40px; height: 40px; border: 0; border-radius: 10px; background: #e7eaff; color: var(--azul); font-size: 1.2rem; }
 
     main { max-width: 720px; margin: 0 auto; padding: 14px 16px 90px; }
+    .ptr { height: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; gap: 8px; color: var(--suave); font-size: .85rem; font-weight: 600; }
+    .ptr.is-suelto { transition: height .25s ease; }
+    .ptr__flecha { display: inline-block; transition: transform .2s; font-size: 1.1rem; }
+    .ptr.is-listo .ptr__flecha { transform: rotate(180deg); }
+    .ptr.is-cargando .ptr__flecha { animation: girar .8s linear infinite; }
+    @keyframes girar { to { transform: rotate(360deg); } }
     .ayuda { color: var(--suave); font-size: .85rem; text-align: center; margin: 18px 8px; line-height: 1.5; }
 
     /* Tarjeta de cada compra */
@@ -105,6 +114,8 @@
       <button type="button" aria-label="Borrar búsqueda" data-limpiar hidden>✕</button>
     </div>
   </header>
+
+  <div class="ptr" aria-hidden="true" data-ptr><span class="ptr__flecha">↓</span><span data-ptr-txt>Estirá para actualizar</span></div>
 
   <main>
     <form class="login" data-login hidden>
@@ -192,7 +203,7 @@
 
     // ───────── Datos ─────────
     async function cargar() {
-      if (DEMO) { if (!datos) datos = datosDemo(); return render(); }
+      if (DEMO) { if (!datos) datos = datosDemo(); render(); return true; }
       const inicio = Date.now();
       try {
         const res = await fetch(`${URL_SCRIPT}?accion=puerta&clave=${encodeURIComponent(clave)}`, { cache: "no-store" });
@@ -205,13 +216,15 @@
           return;
         }
         // Si mientras tanto se guardó un toque, esta lista ya está vieja: se espera a la próxima
-        if (inicio < ultimoGuardado) return;
+        if (inicio < ultimoGuardado) return false;
         aviso = "";
         datos = { grupos: json.grupos, totales: json.totales, actualizado: json.actualizado };
         guardado.escribir("datos", datos);
         render();
+        return true;
       } catch (e) {
         mostrarSync(true);
+        return false;
       }
     }
 
@@ -252,11 +265,52 @@
     }
 
     async function sincronizar() {
-      if (!clave) return;
+      if (!clave) return false;
       await enviarPendientes();
-      if (!pendientes.length) await cargar();
-      mostrarSync();
+      const ok = !pendientes.length && await cargar();
+      mostrarSync(!ok && !navigator.onLine);
+      return ok;
     }
+
+    // ───────── Estirar para actualizar ─────────
+    const ptr = $("[data-ptr]");
+    const ptrTxt = $("[data-ptr-txt]");
+    const UMBRAL = 64;
+    let y0 = null;
+    let estirado = 0;
+    let actualizando = false;
+    window.addEventListener("touchstart", (e) => {
+      const puede = !actualizando && datos && window.scrollY <= 0 && !e.target.closest("input, button");
+      y0 = puede ? e.touches[0].clientY : null;
+      estirado = 0;
+    }, { passive: true });
+    window.addEventListener("touchmove", (e) => {
+      if (y0 == null) return;
+      const d = e.touches[0].clientY - y0;
+      estirado = d > 0 ? Math.min(d * 0.5, 96) : 0;
+      ptr.classList.remove("is-suelto");
+      ptr.style.height = estirado + "px";
+      ptr.classList.toggle("is-listo", estirado >= UMBRAL);
+      ptrTxt.textContent = estirado >= UMBRAL ? "Soltá para actualizar" : "Estirá para actualizar";
+    }, { passive: true });
+    window.addEventListener("touchend", async () => {
+      if (y0 == null) return;
+      y0 = null;
+      ptr.classList.add("is-suelto");
+      if (estirado >= UMBRAL) {
+        actualizando = true;
+        ptr.classList.remove("is-listo");
+        ptr.classList.add("is-cargando");
+        ptrTxt.textContent = "Actualizando…";
+        ptr.style.height = "48px";
+        const ok = await sincronizar();
+        ptr.classList.remove("is-cargando");
+        actualizando = false;
+        toast(ok ? "✓ Lista actualizada" : pendientes.length ? "Sin señal: los ingresos se guardan cuando vuelva" : "Sin conexión: se muestra la última lista");
+      }
+      estirado = 0;
+      ptr.style.height = "0px";
+    });
 
     // ───────── Marcar ingreso ─────────
     function marcar(id, delta) {
@@ -371,7 +425,10 @@
       if (mas) marcar(Number(mas.dataset.mas), 1);
       if (menos) marcar(Number(menos.dataset.menos), -1);
     });
-    $("[data-actualizar]").addEventListener("click", () => { $("[data-sync]").textContent = "Actualizando…"; sincronizar(); });
+    $("[data-actualizar]").addEventListener("click", async () => {
+      $("[data-sync]").textContent = "Actualizando…";
+      toast((await sincronizar()) ? "✓ Lista actualizada" : "Sin conexión: se muestra la última lista");
+    });
     $("[data-salir]").addEventListener("click", () => {
       if (pendientes.length && !confirm(`Hay ${pendientes.length} ingresos sin guardar todavía. ¿Cerrar igual?`)) return;
       guardado.borrar("datos"); guardado.borrar("pendientes");
