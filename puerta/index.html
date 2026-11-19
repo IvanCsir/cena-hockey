@@ -1,0 +1,413 @@
+<!doctype html>
+<html lang="es-AR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Ingreso · Cena del Hockey</title>
+  <meta name="theme-color" content="#0a1a6e">
+  <link rel="icon" href="../img/logo-regatas.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --azul: #0a1a6e; --royal: #3344b5; --rojo: #d0282f;
+      --texto: #1d2450; --suave: #5b6390; --linea: rgba(10, 26, 110, .12);
+      --fondo: #eef1ff; --panel: #ffffff;
+      --ok: #157a3c; --ok-bg: #e3f6ea;
+      --amarillo: #8a6100; --amarillo-bg: #fff4d6;
+      --falta: #b3261e; --falta-bg: #fde6e4;
+      --revisar: #6a3fb5; --revisar-bg: #efe7fd;
+      --radio: 16px;
+    }
+    * { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
+    body { margin: 0; font-family: "Montserrat", system-ui, -apple-system, "Segoe UI", sans-serif; background: var(--fondo); color: var(--texto); }
+    button { font: inherit; cursor: pointer; }
+    [hidden] { display: none !important; }
+
+    /* Cabecera fija con contador y buscador */
+    .top { position: sticky; top: 0; z-index: 5; background: var(--azul); color: #fff; padding: 12px 16px 14px; padding-top: max(12px, env(safe-area-inset-top)); box-shadow: 0 6px 20px rgba(10, 26, 110, .25); }
+    .top__fila { display: flex; align-items: center; gap: 12px; max-width: 720px; margin: 0 auto; }
+    .top__titulo { flex: 1; min-width: 0; }
+    .top__titulo h1 { margin: 0; font-size: 1rem; font-weight: 700; letter-spacing: .02em; }
+    .top__sync { margin: 2px 0 0; font-size: .72rem; color: #c9d0ff; }
+    .top__sync.is-offline { color: #ffd27a; }
+    .contador { text-align: right; line-height: 1.1; }
+    .contador strong { display: block; font-size: 1.5rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+    .contador span { font-size: .7rem; color: #c9d0ff; }
+    .buscar { position: relative; max-width: 720px; margin: 12px auto 0; }
+    .buscar input { width: 100%; font: inherit; font-size: 1.15rem; padding: 14px 48px 14px 16px; border-radius: 12px; border: 0; background: #fff; color: var(--texto); outline: none; }
+    .buscar input:focus { box-shadow: 0 0 0 3px #8d9bff; }
+    .buscar button { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 40px; height: 40px; border: 0; border-radius: 10px; background: #e7eaff; color: var(--azul); font-size: 1.2rem; }
+
+    main { max-width: 720px; margin: 0 auto; padding: 14px 16px 90px; }
+    .ayuda { color: var(--suave); font-size: .85rem; text-align: center; margin: 18px 8px; line-height: 1.5; }
+
+    /* Tarjeta de cada compra */
+    .g { background: var(--panel); border-radius: var(--radio); padding: 14px 14px 12px; margin-bottom: 12px; border-left: 6px solid var(--ok); box-shadow: 0 2px 10px rgba(10, 26, 110, .06); }
+    .g--sinverificar { border-left-color: #e0a800; }
+    .g--falta { border-left-color: var(--falta); }
+    .g--revisar { border-left-color: var(--revisar); }
+    .g__top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+    .g h2 { margin: 0; font-size: 1.15rem; line-height: 1.25; font-weight: 700; color: var(--azul); }
+    .estado { flex-shrink: 0; font-size: .78rem; font-weight: 700; padding: 5px 9px; border-radius: 999px; background: var(--ok-bg); color: var(--ok); white-space: nowrap; }
+    .estado--sinverificar { background: var(--amarillo-bg); color: var(--amarillo); }
+    .estado--falta { background: var(--falta-bg); color: var(--falta); }
+    .estado--revisar { background: var(--revisar-bg); color: var(--revisar); }
+    .g__quienes { margin: 6px 0 0; font-size: .95rem; }
+    .g__quienes b { color: var(--suave); font-weight: 600; }
+    .g__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 8px 0 0; font-size: .8rem; color: var(--suave); }
+    .chip { background: #e7eaff; color: var(--azul); font-weight: 700; padding: 3px 8px; border-radius: 8px; }
+    .g__nota { margin: 8px 0 0; padding: 8px 10px; border-radius: 10px; background: var(--revisar-bg); color: #3f2475; font-size: .82rem; line-height: 1.4; }
+    .ingreso { display: flex; align-items: center; gap: 10px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--linea); }
+    .ingreso__menos { width: 46px; height: 46px; border-radius: 12px; border: 1px solid var(--linea); background: #fff; color: var(--azul); font-size: 1.4rem; font-weight: 700; }
+    .ingreso__menos:disabled { opacity: .3; cursor: default; }
+    .ingreso__cuenta { flex: 1; font-size: .85rem; color: var(--suave); }
+    .ingreso__cuenta strong { font-size: 1.3rem; color: var(--texto); font-variant-numeric: tabular-nums; }
+    .ingreso__mas { min-width: 128px; height: 46px; border-radius: 12px; border: 0; background: var(--royal); color: #fff; font-weight: 700; font-size: 1rem; padding: 0 16px; }
+    .ingreso__mas:disabled { background: var(--ok-bg); color: var(--ok); cursor: default; }
+    .g.is-completo { opacity: .75; }
+
+    /* Pantalla de clave */
+    .login { max-width: 420px; margin: 40px auto; background: #fff; border-radius: var(--radio); padding: 22px; box-shadow: 0 2px 10px rgba(10, 26, 110, .08); }
+    .login h2 { margin: 0 0 6px; color: var(--azul); font-size: 1.2rem; }
+    .login p { margin: 0 0 14px; color: var(--suave); font-size: .9rem; line-height: 1.5; }
+    .login input { width: 100%; font: inherit; font-size: 1.1rem; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--linea); margin-bottom: 12px; }
+    .login button { width: 100%; height: 48px; border: 0; border-radius: 12px; background: var(--royal); color: #fff; font-weight: 700; font-size: 1rem; }
+    .login__error { color: var(--falta) !important; font-weight: 600; }
+
+    .pie { display: flex; justify-content: center; gap: 10px; margin-top: 20px; }
+    .pie button { border: 1px solid var(--linea); background: #fff; color: var(--azul); border-radius: 10px; padding: 10px 14px; font-size: .85rem; font-weight: 600; }
+
+    .toast { position: fixed; left: 50%; bottom: max(18px, env(safe-area-inset-bottom)); transform: translate(-50%, 20px); opacity: 0; transition: .25s; background: var(--azul); color: #fff; padding: 12px 18px; border-radius: 12px; font-size: .9rem; font-weight: 600; box-shadow: 0 8px 24px rgba(0, 0, 0, .25); max-width: calc(100% - 32px); text-align: center; z-index: 10; pointer-events: none; }
+    .toast.is-visible { opacity: 1; transform: translate(-50%, 0); }
+    .demo { background: #ffd27a; color: #4a3500; text-align: center; font-size: .78rem; font-weight: 700; padding: 6px; }
+  </style>
+</head>
+<body>
+  <div class="demo" data-demo hidden>MODO DEMO · datos inventados, nada se guarda</div>
+
+  <header class="top">
+    <div class="top__fila">
+      <div class="top__titulo">
+        <h1>Ingreso · Cena del Hockey</h1>
+        <p class="top__sync" data-sync>Cargando…</p>
+      </div>
+      <div class="contador" data-contador hidden>
+        <strong data-cont-num>0 / 0</strong>
+        <span>ingresaron</span>
+      </div>
+    </div>
+    <div class="buscar" data-buscar hidden>
+      <input type="text" placeholder="Nombre, apellido o categoría" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" aria-label="Buscar" data-q>
+      <button type="button" aria-label="Borrar búsqueda" data-limpiar hidden>✕</button>
+    </div>
+  </header>
+
+  <main>
+    <form class="login" data-login hidden>
+      <h2>Clave de la puerta</h2>
+      <p>Pedísela a quien organiza. Queda guardada en este celular.</p>
+      <p class="login__error" data-login-error hidden>La clave no es correcta.</p>
+      <input type="text" autocomplete="off" autocapitalize="off" spellcheck="false" required aria-label="Clave" data-clave>
+      <button type="submit">Entrar</button>
+    </form>
+
+    <div data-lista></div>
+
+    <div class="pie" data-pie hidden>
+      <button type="button" data-actualizar>Actualizar lista</button>
+      <button type="button" data-salir>Cerrar sesión</button>
+    </div>
+  </main>
+
+  <div class="toast" role="status" aria-live="polite" data-toast></div>
+
+  <script>
+  (() => {
+    // Misma URL que CONFIG.sheetsUrl en js/main.js
+    const URL_SCRIPT = "https://script.google.com/macros/s/AKfycbyA_TEJ6taShaEVKJBW1iI_juR6ZKE4uCQwFzwgGPgpRHqJGvPZmw3w_-fTOG5ePkYV/exec";
+    const CADA = 20000; // cada cuánto se sincroniza con la planilla (ms)
+    const MAX_TARJETAS = 60;
+
+    const DEMO = new URLSearchParams(location.search).has("demo");
+    const K = DEMO ? "puerta.demo." : "puerta.";
+    const $ = (s) => document.querySelector(s);
+
+    const guardado = {
+      leer(k, def) { try { const v = localStorage.getItem(K + k); return v == null ? def : JSON.parse(v); } catch (e) { return def; } },
+      escribir(k, v) { try { localStorage.setItem(K + k, JSON.stringify(v)); } catch (e) { /* sin almacenamiento */ } },
+      borrar(k) { try { localStorage.removeItem(K + k); } catch (e) { /* nada */ } },
+    };
+
+    // La clave puede venir en el link: …/puerta/#clave=xxxx (el # no viaja a ningún servidor)
+    const enLink = location.hash.match(/clave=([^&]+)/);
+    if (enLink) {
+      guardado.escribir("clave", decodeURIComponent(enLink[1]));
+      history.replaceState(null, "", location.pathname + location.search);
+    }
+
+    let clave = DEMO ? "demo" : guardado.leer("clave", "");
+    let datos = guardado.leer("datos", null);          // { grupos, totales, actualizado }
+    let pendientes = guardado.leer("pendientes", []);  // toques todavía no guardados en la planilla
+    let ultimoGuardado = 0;
+    let enviando = false;
+    let aviso = "";
+
+    const pesos = (n) => "$ " + Number(n).toLocaleString("es-AR");
+    const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    const norm = (s) => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+
+    function toast(txt) {
+      const t = $("[data-toast]");
+      t.textContent = txt;
+      t.classList.add("is-visible");
+      clearTimeout(toast.t);
+      toast.t = setTimeout(() => t.classList.remove("is-visible"), 2200);
+    }
+
+    function ingresaron(g) {
+      const extra = pendientes.filter((p) => p.id === g.id).reduce((a, p) => a + p.delta, 0);
+      return Math.max(0, Math.min(g.total, g.ingresaron + extra));
+    }
+
+    // ───────── Estado de conexión ─────────
+    function mostrarSync(error) {
+      const el = $("[data-sync]");
+      const n = pendientes.length;
+      let txt;
+      if (DEMO) txt = "Modo demo";
+      else if (aviso && !datos) txt = aviso;
+      else if (!navigator.onLine || error) txt = "Sin conexión" + (n ? ` · ${n} sin guardar` : " · usando la última lista");
+      else if (n) txt = `Guardando ${n}…`;
+      else if (datos && datos.actualizado) {
+        const min = Math.round((Date.now() - new Date(datos.actualizado)) / 60000);
+        txt = "Actualizado " + (min < 1 ? "recién" : `hace ${min} min`);
+      } else txt = "Cargando…";
+      el.textContent = txt;
+      el.classList.toggle("is-offline", !DEMO && (!navigator.onLine || !!error || n > 0));
+    }
+
+    // ───────── Datos ─────────
+    async function cargar() {
+      if (DEMO) { if (!datos) datos = datosDemo(); return render(); }
+      const inicio = Date.now();
+      try {
+        const res = await fetch(`${URL_SCRIPT}?accion=puerta&clave=${encodeURIComponent(clave)}`, { cache: "no-store" });
+        const json = await res.json();
+        if (json.error === "clave") return pedirClave(true);
+        if (!json.ok) throw new Error(json.error || "Error");
+        if (!Array.isArray(json.grupos)) {
+          // El Apps Script todavía es la versión vieja (falta "Nueva versión" en Implementar)
+          aviso = "La planilla todavía no está actualizada para el ingreso";
+          return;
+        }
+        // Si mientras tanto se guardó un toque, esta lista ya está vieja: se espera a la próxima
+        if (inicio < ultimoGuardado) return;
+        aviso = "";
+        datos = { grupos: json.grupos, totales: json.totales, actualizado: json.actualizado };
+        guardado.escribir("datos", datos);
+        render();
+      } catch (e) {
+        mostrarSync(true);
+      }
+    }
+
+    async function enviarPendientes() {
+      if (DEMO || enviando || !pendientes.length) return;
+      enviando = true;
+      try {
+        while (pendientes.length) {
+          const p = pendientes[0];
+          let json;
+          try {
+            const res = await fetch(URL_SCRIPT, {
+              method: "POST",
+              headers: { "Content-Type": "text/plain;charset=utf-8" },
+              body: JSON.stringify({ accion: "ingreso", clave, fila: p.id, delta: p.delta, op: p.op }),
+            });
+            json = await res.json();
+          } catch (e) {
+            mostrarSync(true);
+            break; // sin señal: se reintenta después con el mismo id, sin contar dos veces
+          }
+          if (json.error === "clave") { pedirClave(true); break; }
+          pendientes.shift();
+          if (json.ok) {
+            const g = datos && datos.grupos.find((x) => x.id === json.id);
+            if (g) g.ingresaron = json.ingresaron;
+            ultimoGuardado = Date.now();
+          } else {
+            toast("No se pudo guardar: " + (json.error || "error"));
+          }
+          guardado.escribir("pendientes", pendientes);
+          guardado.escribir("datos", datos);
+        }
+      } finally {
+        enviando = false;
+        render();
+      }
+    }
+
+    async function sincronizar() {
+      if (!clave) return;
+      await enviarPendientes();
+      if (!pendientes.length) await cargar();
+      mostrarSync();
+    }
+
+    // ───────── Marcar ingreso ─────────
+    function marcar(id, delta) {
+      const g = datos.grupos.find((x) => x.id === id);
+      if (!g) return;
+      const actual = ingresaron(g);
+      if (delta > 0 && actual >= g.total) return;
+      if (delta < 0 && actual <= 0) return;
+      if (delta > 0 && (g.estado === "falta" || g.estado === "revisar")) {
+        const motivo = g.estado === "falta" ? `Falta pagar ${pesos(g.falta)}.` : "Este pago hay que revisarlo.";
+        if (!confirm(`${motivo}\n¿Marcar el ingreso igual?`)) return;
+      }
+      const op = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+      if (DEMO) g.ingresaron = actual + delta;
+      else pendientes.push({ id, delta, op });
+      guardado.escribir("pendientes", pendientes);
+      guardado.escribir("datos", datos);
+      render();
+      toast(delta > 0 ? `✓ Ingresó · ${g.nombre} (${actual + 1}/${g.total})` : `Se descontó un ingreso · ${g.nombre}`);
+      enviarPendientes();
+    }
+
+    // ───────── Pantalla ─────────
+    const ESTADOS = {
+      ok: () => "✅ Pagado",
+      sinverificar: () => "🟡 Pagó · sin verificar",
+      falta: (g) => "⚠️ Falta " + pesos(g.falta),
+      revisar: () => "❓ Revisar",
+    };
+
+    function tarjeta(g) {
+      const n = ingresaron(g);
+      const completo = g.total > 0 && n >= g.total;
+      const chips = Object.keys(g.entradas || {}).map((c) => `<span class="chip">${esc(c)} ×${g.entradas[c]}</span>`).join("");
+      return `
+        <article class="g g--${g.estado}${completo ? " is-completo" : ""}">
+          <div class="g__top">
+            <h2>${esc(g.nombre)}</h2>
+            <span class="estado estado--${g.estado}">${ESTADOS[g.estado](g)}</span>
+          </div>
+          ${g.quienes ? `<p class="g__quienes"><b>Van:</b> ${esc(g.quienes)}</p>` : ""}
+          <p class="g__meta">${chips}${g.tel ? `<span>Tel. …${esc(g.tel)}</span>` : ""}<span>Fila ${g.filas.join(" + ")}</span></p>
+          ${g.nota ? `<p class="g__nota">${esc(g.nota)}</p>` : ""}
+          ${g.suelta ? "" : `
+          <div class="ingreso">
+            <button type="button" class="ingreso__menos" data-menos="${g.id}" aria-label="Descontar un ingreso" ${n ? "" : "disabled"}>−</button>
+            <p class="ingreso__cuenta"><strong>${n}</strong> de ${g.total} ${g.total === 1 ? "entrada" : "entradas"}</p>
+            <button type="button" class="ingreso__mas" data-mas="${g.id}" ${completo ? "disabled" : ""}>${completo ? "✓ Ya entraron" : "+ Ingresó"}</button>
+          </div>`}
+        </article>`;
+    }
+
+    function render() {
+      if (!datos) return mostrarSync();
+      $("[data-buscar]").hidden = false;
+      $("[data-contador]").hidden = false;
+      $("[data-pie]").hidden = DEMO;
+
+      const total = datos.grupos.reduce((a, g) => a + g.total, 0);
+      const dentro = datos.grupos.reduce((a, g) => a + ingresaron(g), 0);
+      $("[data-cont-num]").textContent = `${dentro} / ${total}`;
+
+      const q = norm($("[data-q]").value).split(/[^a-z0-9]+/).filter(Boolean);
+      $("[data-limpiar]").hidden = !q.length;
+      let lista = datos.grupos.filter((g) => {
+        const texto = norm([g.nombre, g.quienes, Object.keys(g.entradas || {}).join(" "), g.tel].join(" "));
+        return q.every((p) => texto.includes(p));
+      });
+      lista.sort((a, b) => norm(a.nombre).localeCompare(norm(b.nombre)));
+
+      const el = $("[data-lista]");
+      if (!lista.length) {
+        el.innerHTML = `<p class="ayuda">${q.length ? "No hay nadie con ese nombre.<br>Probá con el apellido, la categoría (por ej. <b>8va</b>) o preguntá quién le compró la entrada." : "Todavía no hay inscriptos."}</p>`;
+      } else {
+        el.innerHTML =
+          (q.length ? "" : `<p class="ayuda">Escribí un nombre, apellido o categoría. Podés combinar: <b>perez 8va</b></p>`) +
+          lista.slice(0, MAX_TARJETAS).map(tarjeta).join("") +
+          (lista.length > MAX_TARJETAS ? `<p class="ayuda">Hay ${lista.length - MAX_TARJETAS} más: seguí escribiendo para encontrarlos.</p>` : "");
+      }
+      mostrarSync();
+    }
+
+    function pedirClave(error) {
+      clave = "";
+      guardado.borrar("clave");
+      $("[data-login]").hidden = false;
+      $("[data-login-error]").hidden = !error;
+      $("[data-buscar]").hidden = true;
+      $("[data-contador]").hidden = true;
+      $("[data-pie]").hidden = true;
+      $("[data-lista]").innerHTML = "";
+      $("[data-sync]").textContent = "Falta la clave";
+      $("[data-clave]").focus();
+    }
+
+    // ───────── Eventos ─────────
+    $("[data-login]").addEventListener("submit", (e) => {
+      e.preventDefault();
+      clave = $("[data-clave]").value.trim();
+      if (!clave) return;
+      guardado.escribir("clave", clave);
+      $("[data-login]").hidden = true;
+      $("[data-sync]").textContent = "Cargando…";
+      sincronizar();
+    });
+
+    $("[data-q]").addEventListener("input", render);
+    $("[data-limpiar]").addEventListener("click", () => { const q = $("[data-q]"); q.value = ""; render(); q.focus(); });
+    $("[data-lista]").addEventListener("click", (e) => {
+      const mas = e.target.closest("[data-mas]");
+      const menos = e.target.closest("[data-menos]");
+      if (mas) marcar(Number(mas.dataset.mas), 1);
+      if (menos) marcar(Number(menos.dataset.menos), -1);
+    });
+    $("[data-actualizar]").addEventListener("click", () => { $("[data-sync]").textContent = "Actualizando…"; sincronizar(); });
+    $("[data-salir]").addEventListener("click", () => {
+      if (pendientes.length && !confirm(`Hay ${pendientes.length} ingresos sin guardar todavía. ¿Cerrar igual?`)) return;
+      guardado.borrar("datos"); guardado.borrar("pendientes");
+      datos = null; pendientes = [];
+      pedirClave(false);
+    });
+    window.addEventListener("online", sincronizar);
+    window.addEventListener("offline", () => mostrarSync());
+    document.addEventListener("visibilitychange", () => { if (!document.hidden) sincronizar(); });
+    setInterval(() => { if (!document.hidden) sincronizar(); }, CADA);
+
+    // ───────── Inicio ─────────
+    if (DEMO) $("[data-demo]").hidden = false;
+    if (!clave) pedirClave(false);
+    else { render(); sincronizar(); }
+
+    function datosDemo() {
+      const g = (id, nombre, quienes, tel, entradas, estado, falta, extra) => Object.assign({
+        id, nombre, quienes, tel, entradas, estado, falta, filas: [id], nota: "",
+        total: Object.values(entradas).reduce((a, b) => a + b, 0), ingresaron: 0,
+      }, extra || {});
+      return {
+        actualizado: new Date().toISOString(),
+        grupos: [
+          g(2, "Martín González", "Martín (PS), Sofía y Juan González (8va)", "1234", { "8va": 2, PS: 1 }, "ok", 0, { filas: [2, 9] }),
+          g(3, "Laura Gómez", "Valentina Pérez (9na)", "8812", { "9na": 1 }, "ok", 0),
+          g(4, "Lucía González", "", "4410", { "6ta": 1 }, "falta", 35000),
+          g(5, "Carolina Díaz", "Carolina y Pablo Díaz (PS)", "7720", { PS: 2 }, "sinverificar", 0),
+          g(6, "Tomás Fernández", "", "3011", { "5ta": 1 }, "ok", 0, { ingresaron: 1 }),
+          g(7, "Juan Pérez", "", "5590", { PS: 1 }, "revisar", 35000, { nota: "Puede que su 2ª cuota sea la fila 11 de Inscriptos." }),
+          g(8, "Ana Sosa", "Ana Sosa (PS), Mateo Sosa (10ma)", "", { "10ma": 1, PS: 1 }, "ok", 0),
+          g("s11", "Juan Perez García", "", "", { PS: 1 }, "revisar", 0, { suelta: true, total: 0, filas: [11], nota: "2ª cuota sin unir a su 1ª cuota (¿fila 7?). Corregí el teléfono o el nombre en Inscriptos para que coincidan con la 1ª cuota." }),
+        ],
+      };
+    }
+  })();
+  </script>
+</body>
+</html>

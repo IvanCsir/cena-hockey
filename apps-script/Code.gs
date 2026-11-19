@@ -39,7 +39,7 @@ const COLUMNAS = [
   'Fecha', 'Nombre y apellido', 'Teléfono', 'Pago',
   ...CATEGORIAS,
   'Total entradas', 'Monto', 'Titular de la cuenta', 'Comprobante', 'Miniatura',
-  'Quiénes van', 'Comentarios', 'Pago verificado',
+  'Quiénes van', 'Comentarios', 'Pago verificado', 'Ingresaron',
 ];
 const col = (nombre) => COLUMNAS.indexOf(nombre) + 1;
 const COL_COMPROBANTE = col('Comprobante');
@@ -53,6 +53,9 @@ function doPost(e) {
   lock.waitLock(30000);
   try {
     const d = JSON.parse(e.postData.contents);
+
+    // Página de ingreso (/puerta): marcar quién entró
+    if (d.accion === 'ingreso') return marcarIngreso(d);
 
     // Trampa para bots: el campo "website" está oculto en el formulario.
     if (d.website) return responder({ ok: true });
@@ -152,7 +155,14 @@ function doPost(e) {
 }
 
 // Para probar que la implementación responde: abrir la URL /exec en el navegador.
-function doGet() {
+// Con ?accion=puerta&clave=… devuelve la lista para la página de ingreso.
+function doGet(e) {
+  const p = (e && e.parameter) || {};
+  if (p.accion === 'puerta') {
+    if (!claveOk(p.clave)) return responder({ ok: false, error: 'clave' });
+    const lista = armarGrupos(leerFilas(obtenerHoja()));
+    return responder({ ok: true, actualizado: new Date().toISOString(), grupos: lista.grupos, totales: lista.totales });
+  }
   return responder({ ok: true, mensaje: 'El formulario de la Cena del Hockey está funcionando.' });
 }
 
@@ -203,4 +213,245 @@ function extension(tipo, nombreOriginal) {
 
 function responder(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
+}
+
+/* ═══════════════════════════ PÁGINA DE INGRESO (/puerta) ═══════════════════════════
+ * La página puerta/ del sitio busca a la gente cuando llega y marca cuántos entraron.
+ * Para usarla:
+ * 1. En el editor de Apps Script elegí la función "crearClavePuerta" (arriba, al lado
+ *    de "Ejecutar") y tocá Ejecutar. En el "Registro de ejecución" aparece la clave y
+ *    el link para mandarle a quienes estén en la puerta.
+ * 2. Implementar → Gestionar implementaciones → ✏️ → Versión: "Nueva versión" → Implementar.
+ * Los ingresos se guardan en la columna "Ingresaron" de la hoja Inscriptos.
+ * ═══════════════════════════════════════════════════════════════════════════════════ */
+
+// Tienen que coincidir con CONFIG.precios en js/main.js
+const PRECIOS = { '7ma': 35000, '8va': 35000, '9na': 35000, '10ma': 35000, '6ta': 70000, '5ta': 70000, 'PS': 70000 };
+const URL_PUERTA = 'https://ivancsir.github.io/cena-hockey/puerta/';
+
+function crearClavePuerta() {
+  const abc = 'abcdefghjkmnpqrstuvwxyz23456789';
+  let clave = '';
+  for (let i = 0; i < 10; i++) clave += abc[Math.floor(Math.random() * abc.length)];
+  PropertiesService.getScriptProperties().setProperty('CLAVE_PUERTA', clave);
+  Logger.log('Clave de la puerta: ' + clave);
+  Logger.log('Link para la puerta (ya trae la clave): ' + URL_PUERTA + '#clave=' + clave);
+}
+
+function claveOk(clave) {
+  const real = PropertiesService.getScriptProperties().getProperty('CLAVE_PUERTA');
+  return !!real && String(clave || '') === real;
+}
+
+// Columna "Ingresaron": si la planilla es anterior a la página de ingreso, se agrega al final.
+function columnaIngresaron(hoja) {
+  const enc = hoja.getRange(1, 1, 1, hoja.getLastColumn()).getValues()[0].map(String);
+  const i = enc.indexOf('Ingresaron');
+  if (i >= 0) return i + 1;
+  const c = hoja.getLastColumn() + 1;
+  hoja.getRange(1, c).setValue('Ingresaron').setFontWeight('bold').setBackground('#0a1a6e').setFontColor('#ffffff');
+  hoja.getRange(1, c, hoja.getMaxRows(), 1).setHorizontalAlignment('center');
+  return c;
+}
+
+function leerFilas(hoja) {
+  if (hoja.getLastRow() < 2) return [];
+  columnaIngresaron(hoja);
+  const valores = hoja.getDataRange().getValues();
+  const enc = valores[0].map(String);
+  const v = (fila, nombre) => { const i = enc.indexOf(nombre); return i >= 0 ? fila[i] : ''; };
+  return valores.slice(1).map((r, k) => {
+    const entradas = {};
+    CATEGORIAS.forEach((c) => { const n = Number(v(r, c)) || 0; if (n > 0) entradas[c] = n; });
+    return {
+      fila: k + 2,
+      nombre: String(v(r, 'Nombre y apellido')).replace(/^'/, '').trim(),
+      telefono: String(v(r, 'Teléfono')).replace(/^'/, ''),
+      pago: String(v(r, 'Pago')) || 'Total',
+      entradas: entradas,
+      monto: Number(v(r, 'Monto')) || 0,
+      quienes: String(v(r, 'Quiénes van')).replace(/^'/, '').trim(),
+      comentarios: String(v(r, 'Comentarios')),
+      verificado: v(r, 'Pago verificado') === true,
+      ingresaron: Number(v(r, 'Ingresaron')) || 0,
+    };
+  }).filter((f) => f.nombre);
+}
+
+/**
+ * Junta cada 1ª cuota con su 2ª cuota y calcula cuánto falta pagar.
+ * Una 2ª cuota se une a una 1ª cuota con las mismas entradas y:
+ *   1) el mismo teléfono (últimos 7 dígitos), o si no
+ *   2) el mismo nombre: todas las palabras del nombre más corto están en el más largo
+ *      ("Juan Perez" = "Juan Pérez García"), con al menos 2 palabras.
+ * Si no hay un único candidato, no adivina: queda "revisar".
+ */
+function armarGrupos(filas) {
+  const grupos = [];
+  const segundas = [];
+  filas.forEach((f) => {
+    if (f.pago === '2ª cuota') {
+      // Desde que la 2ª cuota no suma entradas, el detalle queda en Comentarios
+      const m = f.comentarios.match(/\[2ª cuota de: ([^\]]*)\]/);
+      if (m) {
+        f.entradas = {};
+        m[1].split('·').forEach((p) => {
+          const x = p.trim().match(/^(\S+)\s*×\s*(\d+)$/);
+          if (x) f.entradas[x[1]] = Number(x[2]);
+        });
+      }
+      segundas.push(f);
+    } else if (totalDe(f.entradas) > 0) {
+      grupos.push({ f: f, cuotas: [], posibles: [], repetida: [] });
+    }
+  });
+
+  const sueltas = [];
+  segundas.forEach((s) => {
+    const cats = claveEntradas(s.entradas);
+    const cands = grupos.filter((g) => g.f.pago === '1ª cuota' && claveEntradas(g.f.entradas) === cats);
+    const t = tel7(s.telefono);
+    const porTel = t ? cands.filter((g) => tel7(g.f.telefono) === t) : [];
+    let elegido = porTel.length === 1 ? porTel[0] : null;
+    let dudosos = porTel;
+    if (!elegido) {
+      let porNombre = (porTel.length > 1 ? porTel : cands).filter((g) => mismoNombre(g.f.nombre, s.nombre));
+      if (porNombre.length > 1) {
+        // Si uno está escrito exactamente igual, es ese
+        const iguales = porNombre.filter((g) => igualNombre(g.f.nombre, s.nombre));
+        if (iguales.length === 1) porNombre = iguales;
+      }
+      if (porNombre.length > 1) {
+        const libres = porNombre.filter((g) => g.cuotas.length === 0);
+        if (libres.length === 1) porNombre = libres;
+      }
+      if (porNombre.length === 1) elegido = porNombre[0];
+      else if (porNombre.length > 1) dudosos = porNombre;
+    }
+    if (elegido) elegido.cuotas.push(s);
+    else {
+      sueltas.push({ s: s, dudosos: dudosos });
+      dudosos.forEach((g) => g.posibles.push(s.fila));
+    }
+  });
+
+  // Compras repetidas (por ejemplo, alguien que mandó el formulario dos veces)
+  grupos.forEach((a, i) => grupos.slice(i + 1).forEach((b) => {
+    if (a.f.pago !== b.f.pago || claveEntradas(a.f.entradas) !== claveEntradas(b.f.entradas)) return;
+    const ta = tel7(a.f.telefono);
+    if ((ta && ta === tel7(b.f.telefono)) || igualNombre(a.f.nombre, b.f.nombre)) {
+      a.repetida.push(b.f.fila);
+      b.repetida.push(a.f.fila);
+    }
+  }));
+
+  const salida = grupos.map((g) => {
+    const f = g.f;
+    const total = totalDe(f.entradas);
+    const esperado = Object.keys(f.entradas).reduce((a, c) => a + (PRECIOS[c] || 0) * f.entradas[c], 0);
+    const todas = [f].concat(g.cuotas);
+    const pagado = todas.reduce((a, r) => a + (r.monto || (r.pago === 'Total' ? esperado : esperado / 2)), 0);
+    const falta = Math.max(0, esperado - pagado);
+    let estado = falta > 0 ? 'falta' : todas.every((r) => r.verificado) ? 'ok' : 'sinverificar';
+    const notas = [];
+    if (falta > 0 && g.posibles.length) {
+      estado = 'revisar';
+      notas.push('Puede que su 2ª cuota sea la fila ' + g.posibles.join(', ') + ' de Inscriptos.');
+    }
+    if (g.repetida.length) notas.push('¿Compra repetida? Mirá también la fila ' + g.repetida.join(', ') + '.');
+    return {
+      id: f.fila,
+      nombre: f.nombre,
+      quienes: f.quienes,
+      tel: ultimos4(f.telefono),
+      entradas: f.entradas,
+      total: total,
+      ingresaron: Math.min(f.ingresaron, total),
+      estado: estado,
+      falta: falta,
+      filas: todas.map((r) => r.fila),
+      nota: notas.join(' '),
+    };
+  });
+
+  sueltas.forEach((x) => {
+    const s = x.s;
+    salida.push({
+      id: 's' + s.fila,
+      suelta: true,
+      nombre: s.nombre,
+      quienes: s.quienes,
+      tel: ultimos4(s.telefono),
+      entradas: s.entradas,
+      total: 0,
+      ingresaron: 0,
+      estado: 'revisar',
+      falta: 0,
+      filas: [s.fila],
+      nota: '2ª cuota sin unir a su 1ª cuota' +
+        (x.dudosos.length ? ' (¿fila ' + x.dudosos.map((g) => g.f.fila).join(' o ') + '?)' : '') +
+        '. Corregí el teléfono o el nombre en Inscriptos para que coincidan con la 1ª cuota.',
+    });
+  });
+
+  const totales = salida.reduce((a, g) => ({ entradas: a.entradas + g.total, ingresaron: a.ingresaron + g.ingresaron }), { entradas: 0, ingresaron: 0 });
+  return { grupos: salida, totales: totales };
+}
+
+function marcarIngreso(d) {
+  if (!claveOk(d.clave)) return responder({ ok: false, error: 'clave' });
+  const hoja = obtenerHoja();
+  const col = columnaIngresaron(hoja);
+  const fila = leerFilas(hoja).filter((f) => f.fila === Number(d.fila) && f.pago !== '2ª cuota')[0];
+  if (!fila) return responder({ ok: false, error: 'No se encontró la compra' });
+
+  // Cada toque tiene un id: si el celular reintenta por mala señal, no se cuenta dos veces
+  const cache = CacheService.getScriptCache();
+  const op = 'op_' + String(d.op || '').slice(0, 60);
+  let actual = fila.ingresaron;
+  if (!d.op || !cache.get(op)) {
+    const delta = Math.max(-20, Math.min(20, Math.round(Number(d.delta) || 0)));
+    actual = Math.max(0, Math.min(totalDe(fila.entradas), actual + delta));
+    hoja.getRange(fila.fila, col).setValue(actual || '');
+    if (d.op) cache.put(op, '1', 21600);
+  }
+  return responder({ ok: true, id: fila.fila, ingresaron: actual });
+}
+
+function totalDe(entradas) {
+  return Object.keys(entradas).reduce((a, c) => a + (Number(entradas[c]) || 0), 0);
+}
+
+function claveEntradas(entradas) {
+  return Object.keys(entradas).filter((c) => entradas[c] > 0).sort().map((c) => c + '×' + entradas[c]).join('|');
+}
+
+function tel7(t) {
+  const d = String(t || '').replace(/\D/g, '');
+  return d.length >= 7 ? d.slice(-7) : '';
+}
+
+function ultimos4(t) {
+  const d = String(t || '').replace(/\D/g, '');
+  return d.length >= 4 ? d.slice(-4) : '';
+}
+
+const PALABRAS_VACIAS = ['de', 'del', 'la', 'las', 'los', 'y', 'e'];
+function palabras(s) {
+  return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ').trim().split(' ')
+    .filter((p) => p && PALABRAS_VACIAS.indexOf(p) < 0);
+}
+
+function igualNombre(a, b) {
+  const A = palabras(a);
+  return A.length >= 2 && A.join(' ') === palabras(b).join(' ');
+}
+
+function mismoNombre(a, b) {
+  const A = palabras(a);
+  const B = palabras(b);
+  const corto = A.length <= B.length ? A : B;
+  const largo = A.length <= B.length ? B : A;
+  return corto.length >= 2 && corto.every((p) => largo.indexOf(p) >= 0);
 }
