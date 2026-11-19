@@ -659,10 +659,16 @@ const festejarGol = (function () {
   const esSegunda = () => tipoPago() === "2ª cuota";
   const textoBoton = () => (esSegunda() ? "Enviar comprobante de la 2ª cuota" : "Confirmar mi lugar");
   const paso3 = document.querySelector("[data-paso3]");
+  const avisoPago = document.querySelector("[data-aviso-pago]");
+  const AVISO_PAGO = {
+    normal: avisoPago.innerHTML,
+    segunda: "<strong>¡Pagar no alcanza!</strong> Después de pagar, volvé acá y <strong>enviá el comprobante en el paso 3</strong>. Si no, tu 2ª cuota no queda registrada.",
+  };
   function alCambiarPago() {
     avisoCuota2.hidden = !esSegunda();
     if (!submitBtn.disabled) submitLabel.textContent = textoBoton();
     paso3.textContent = esSegunda() ? "Enviá el comprobante" : "Confirmá tu lugar";
+    avisoPago.innerHTML = esSegunda() ? AVISO_PAGO.segunda : AVISO_PAGO.normal;
     actualizarTotal();
   }
   form.querySelectorAll('input[name="pago"]').forEach((r) => r.addEventListener("change", alCambiarPago));
