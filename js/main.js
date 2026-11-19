@@ -682,11 +682,15 @@ const festejarGol = (function () {
       entradasEl.classList.add("is-invalid");
       primero = entradasEl.querySelector("[data-mas]");
     }
-    ["nombre", "titular"].forEach((n) => {
+    // El teléfono es lo que une la 1ª y la 2ª cuota en la planilla: al menos 8 dígitos
+    let telCorto = false;
+    ["nombre", "telefono", "titular"].forEach((n) => {
       const el = form.elements[n];
-      const vacio = !String(el.value).trim();
-      el.classList.toggle("is-invalid", vacio);
-      if (vacio && !primero) primero = el;
+      const texto = String(el.value).trim();
+      let mal = !texto;
+      if (n === "telefono" && texto && texto.replace(/\D/g, "").length < 8) mal = telCorto = true;
+      el.classList.toggle("is-invalid", mal);
+      if (mal && !primero) primero = el;
     });
     const f = fileInput.files[0];
     if (!f) {
@@ -698,7 +702,9 @@ const festejarGol = (function () {
       return false;
     }
     if (primero) {
-      mostrarError("Completá los campos marcados en rojo.");
+      mostrarError(primero === form.elements.telefono && telCorto
+        ? "Revisá el teléfono: poné el número completo con código de área."
+        : "Completá los campos marcados en rojo.");
       primero.focus({ preventScroll: true });
       primero.scrollIntoView({ behavior: "smooth", block: "center" });
       return false;

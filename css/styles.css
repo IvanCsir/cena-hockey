@@ -744,6 +744,7 @@ a { color: inherit; }
   padding-right: 38px;
 }
 .field textarea { resize: vertical; min-height: 70px; }
+.field__nota { font-size: .75rem; color: var(--muted); }
 .field input:focus,
 .field select:focus,
 .field textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; border-color: transparent; }
