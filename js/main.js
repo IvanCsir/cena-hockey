@@ -131,9 +131,17 @@ setText("[data-titular]", CONFIG.pago.titular);
   function activar(tab) {
     tabs.forEach((t) => {
       const on = t === tab;
+      const panel = document.getElementById(t.getAttribute("aria-controls"));
+      const cambia = panel.hidden === on;
       t.setAttribute("aria-selected", on);
       t.tabIndex = on ? 0 : -1;
-      document.getElementById(t.getAttribute("aria-controls")).hidden = !on;
+      panel.hidden = !on;
+      // Los platos entran de a uno al cambiar de pestaña
+      if (on && cambia) {
+        panel.classList.remove("is-entrando");
+        void panel.offsetWidth;
+        panel.classList.add("is-entrando");
+      }
     });
     // Bloques que solo van con una pestaña (ej: la barra libre, solo para 6ta, 5ta y PS)
     document.querySelectorAll("[data-solo-tab]").forEach((el) => {
@@ -191,9 +199,20 @@ if (pricesEl) {
     const h = Math.floor(diff / 36e5);  diff -= h * 36e5;
     const m = Math.floor(diff / 6e4);   diff -= m * 6e4;
     const s = Math.floor(diff / 1e3);
-    els.d.textContent = d; els.h.textContent = pad(h);
-    els.m.textContent = pad(m); els.s.textContent = pad(s);
+    poner(els.d, String(d)); poner(els.h, pad(h));
+    poner(els.m, pad(m));    poner(els.s, pad(s));
     setTimeout(tick, 1000);
+  }
+
+  // Cada número que cambia "salta" un poquito
+  function poner(el, txt) {
+    if (el.textContent === txt) return;
+    const primera = el.textContent === "--";
+    el.textContent = txt;
+    if (primera) return;
+    el.classList.remove("is-tick");
+    void el.offsetWidth; // reinicia la animación
+    el.classList.add("is-tick");
   }
   tick();
 })();
@@ -942,4 +961,32 @@ const festejarGol = (function () {
   document.fonts && document.fonts.ready.then(build);
   if ("ResizeObserver" in window) new ResizeObserver(build).observe(main);
   build();
+})();
+
+// 5) Compartir la invitación (menú del celular o, si no hay, WhatsApp)
+(function compartir() {
+  const btn = document.querySelector("[data-compartir]");
+  if (!btn) return;
+  const url = "https://is.gd/hgCobI";
+  const texto = "¡Vamos a la Cena de Fin de Año del Hockey! 🏑 Sábado 12 de diciembre, 20 hs, Restaurante Regatas. Sacá tu entrada acá:";
+  btn.addEventListener("click", async () => {
+    if (navigator.share) {
+      try { await navigator.share({ title: TITULO, text: texto, url: url }); } catch (e) { /* lo cerró */ }
+      return;
+    }
+    window.open("https://wa.me/?text=" + encodeURIComponent(texto + " " + url), "_blank", "noopener");
+  });
+})();
+
+// 6) Tocar los logos de la portada: saltan y tiran papelitos
+(function logosFiesta() {
+  const logos = document.querySelector(".hero .logos");
+  if (!logos) return;
+  logos.addEventListener("click", () => {
+    logos.classList.remove("is-salto");
+    void logos.offsetWidth;
+    logos.classList.add("is-salto");
+    const r = logos.getBoundingClientRect();
+    confetti(r.left + r.width / 2, r.top + r.height / 2, 50);
+  });
 })();
