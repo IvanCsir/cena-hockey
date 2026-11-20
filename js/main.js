@@ -199,20 +199,9 @@ if (pricesEl) {
     const h = Math.floor(diff / 36e5);  diff -= h * 36e5;
     const m = Math.floor(diff / 6e4);   diff -= m * 6e4;
     const s = Math.floor(diff / 1e3);
-    poner(els.d, String(d)); poner(els.h, pad(h));
-    poner(els.m, pad(m));    poner(els.s, pad(s));
+    els.d.textContent = d; els.h.textContent = pad(h);
+    els.m.textContent = pad(m); els.s.textContent = pad(s);
     setTimeout(tick, 1000);
-  }
-
-  // Cada número que cambia "salta" un poquito
-  function poner(el, txt) {
-    if (el.textContent === txt) return;
-    const primera = el.textContent === "--";
-    el.textContent = txt;
-    if (primera) return;
-    el.classList.remove("is-tick");
-    void el.offsetWidth; // reinicia la animación
-    el.classList.add("is-tick");
   }
   tick();
 })();
@@ -978,7 +967,47 @@ const festejarGol = (function () {
   });
 })();
 
-// 6) Tocar los logos de la portada: saltan y tiran papelitos
+// 6) El día de la cena: aviso en la portada (de 00:00 del día hasta la hora de cierre).
+//    Para probarlo antes: agregar ?dia=cena (antes de las 20) o ?dia=fiesta (ya empezó) a la URL.
+(function diaDeLaCena() {
+  const box = document.querySelector("[data-hoy]");
+  if (!box) return;
+  const titulo = box.querySelector("[data-hoy-titulo]");
+  const txt = box.querySelector("[data-hoy-txt]");
+  const forzar = new URLSearchParams(location.search).get("dia");
+  const inicio = new Date(CONFIG.inicio).getTime();
+  const fin = new Date(CONFIG.fin).getTime();
+  const desde = new Date(CONFIG.inicio.slice(0, 10) + "T00:00:00-03:00").getTime();
+  let festejado = false;
+
+  function ver() {
+    const ahora = forzar === "cena" ? inicio - 36e5 : forzar === "fiesta" ? inicio + 36e5 : Date.now();
+    if (ahora < desde || ahora >= fin) {
+      box.hidden = true;
+      if (ahora < desde) setTimeout(ver, Math.min(desde - ahora, 36e5));
+      return;
+    }
+    if (ahora < inicio) {
+      titulo.textContent = "¡Hoy es la cena! 🏑";
+      txt.textContent = "Te esperamos a las " + CONFIG.hora + " en el Restaurante Regatas.";
+    } else {
+      titulo.textContent = "¡Ya empezó la fiesta! 🎉";
+      txt.textContent = "Estamos en el Restaurante Regatas. ¡Vení!";
+    }
+    box.hidden = false;
+    if (!festejado) {
+      festejado = true;
+      setTimeout(() => {
+        const r = box.getBoundingClientRect();
+        confetti(r.left + r.width / 2, r.top, 90);
+      }, 900);
+    }
+    if (!forzar) setTimeout(ver, 6e4); // a las 20 hs cambia el texto solo
+  }
+  ver();
+})();
+
+// 7) Tocar los logos de la portada: saltan y tiran papelitos
 (function logosFiesta() {
   const logos = document.querySelector(".hero .logos");
   if (!logos) return;

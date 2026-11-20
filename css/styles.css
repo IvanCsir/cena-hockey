@@ -1018,10 +1018,6 @@ main, .footer { position: relative; z-index: 1; }
 .footer__goal.is-gol .footer__goal-txt { opacity: 1; }
 
 /* ---------- Detalles interactivos ---------- */
-/* Números de la cuenta regresiva */
-.countdown strong.is-tick { animation: tick .35s cubic-bezier(.3,.7,.3,1); }
-@keyframes tick { 0% { opacity: .2; transform: translateY(-.35em); } 100% { opacity: 1; transform: none; } }
-
 /* Platos que entran de a uno al cambiar de pestaña */
 .menu__panel.is-entrando .platos > div { animation: rise .45s cubic-bezier(.2,.7,.2,1) both; }
 .menu__panel.is-entrando .platos > div:nth-child(2) { animation-delay: .07s; }
@@ -1035,6 +1031,25 @@ main, .footer { position: relative; z-index: 1; }
 .hero .logos.is-salto .logos__x { display: inline-block; animation: giro .55s ease-out; }
 @keyframes salto { 0%, 100% { transform: none; } 40% { transform: translateY(-14px) rotate(-4deg); } 70% { transform: translateY(2px); } }
 @keyframes giro { to { transform: rotate(360deg); } }
+
+/* Aviso del día de la cena (portada) */
+.hoy {
+  margin: 1.6rem auto 0;
+  max-width: 340px;
+  padding: 20px 18px 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background:
+    radial-gradient(90% 80% at 50% 0%, rgba(208, 40, 47, .12), transparent 70%),
+    var(--panel);
+  box-shadow: var(--panel-shadow);
+  animation: pop .5s ease-out .6s both;
+}
+.hoy[hidden] { display: none; }
+.hoy__titulo { margin: 0; font-family: var(--font-display); font-size: 1.9rem; font-weight: 600; line-height: 1.05; color: var(--secondary); }
+.hoy__txt { margin: .4rem 0 1rem; font-size: .9rem; color: var(--text); }
+.hoy__acciones { display: grid; gap: 8px; }
+.hoy__acciones .btn { max-width: none; min-height: 44px; }
 
 /* Botón compartir del pie */
 .footer__share { display: inline-flex; width: auto; gap: 8px; margin: .75rem 0 1rem; padding-inline: 22px; }
